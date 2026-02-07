@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { haptic } from "@/lib/haptic";
 
 const AUTH_USER_KEY = "carpet-demo-user";
 
@@ -13,6 +14,7 @@ export function SignInForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    haptic();
     if (!email.trim()) return;
     const user = { email: email.trim(), name: email.trim().split("@")[0] };
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));

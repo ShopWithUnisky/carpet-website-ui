@@ -8,9 +8,14 @@ const BASE = `${import.meta.env.BASE_URL || "/"}landing`;
 
 export const landingImages = {
   /** Hero section images (carousel or single). Serve from public/landing/ */
-  hero: ["hero-1.jpg", "hero-2.jpg"],
+  hero: ["hero-1.jpg", "hero-2.jpg", "hero-3.jpg"],
   /** Product showcase grid. Serve from public/landing/ */
-  products: ["product-1.jpg", "product-2.jpg", "product-3.jpg", "product-4.jpg"],
+  products: [
+    "product-1.png",
+    "product-2.jpg",
+    "product-3.jpg",
+    "product-4.jpg",
+  ],
 } as const;
 
 export function getLandingImageUrl(filename: string): string {

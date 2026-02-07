@@ -60,8 +60,8 @@ export function Hero() {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="left-4 border-white/80 text-white hover:bg-white/20 hover:text-white" />
-        <CarouselNext className="right-4 border-white/80 text-white hover:bg-white/20 hover:text-white" />
+        <CarouselPrevious className="left-4 border-white/80 bg-black/40 text-white hover:bg-black/60 hover:text-white [&_svg]:size-5" />
+        <CarouselNext className="right-4 border-white/80 bg-black/40 text-white hover:bg-black/60 hover:text-white [&_svg]:size-5" />
       </Carousel>
     </section>
   );

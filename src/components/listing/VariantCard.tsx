@@ -2,6 +2,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import type { Variant } from "@/data/variants";
+import { haptic } from "@/lib/haptic";
 
 type VariantCardProps = {
   variant: Variant;
@@ -11,6 +12,7 @@ export function VariantCard({ variant }: VariantCardProps) {
   const { addItem } = useCart();
 
   const handleAddToCart = () => {
+    haptic();
     addItem({
       id: variant.id,
       variantId: variant.id,

@@ -1,7 +1,9 @@
 import { Hero } from "@/components/landing/Hero";
 import { ProductShowcase } from "@/components/landing/ProductShowcase";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export function LandingPage() {
+  useDocumentTitle("Carpet Company — Premium Carpets");
   return (
     <>
       <Hero />

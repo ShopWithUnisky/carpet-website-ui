@@ -5,15 +5,22 @@ import { ProfileDetailsTab } from "@/components/profile/ProfileDetailsTab";
 import { PaymentMethodsTab } from "@/components/profile/PaymentMethodsTab";
 import { HistoryTab } from "@/components/profile/HistoryTab";
 import { SettingsTab } from "@/components/profile/SettingsTab";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function ProfilePage() {
+  useDocumentTitle("Profile | Carpet Company");
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
       <div className="container mx-auto max-w-3xl px-4 py-12">
-        <div className="h-8 w-48 animate-pulse rounded bg-muted" />
-        <div className="mt-6 h-64 animate-pulse rounded-lg bg-muted" />
+        <Skeleton className="h-8 w-48" />
+        <div className="mt-8 space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
       </div>
     );
   }

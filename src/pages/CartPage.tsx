@@ -11,8 +11,10 @@ import {
 import { CartItem } from "@/components/cart/CartItem";
 import { CartSummary } from "@/components/cart/CartSummary";
 import { useCart } from "@/context/CartContext";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export function CartPage() {
+  useDocumentTitle("Cart | Carpet Company");
   const { items, totalItems } = useCart();
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 

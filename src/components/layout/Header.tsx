@@ -3,9 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { useTheme } from "@/context/ThemeContext";
 import { haptic } from "@/lib/haptic";
 import { cn } from "@/lib/utils";
-import { HiHome, HiShoppingCart, HiViewGrid } from "react-icons/hi";
+import { HiHome, HiShoppingCart, HiViewGrid, HiHeart, HiSun, HiMoon } from "react-icons/hi";
 import { Link, useLocation } from "react-router-dom";
 import type { User } from "firebase/auth";
 
@@ -27,6 +29,8 @@ const bottomNavItems = [
 export function Header() {
   const { user, loading, signOut } = useAuth();
   const { totalItems } = useCart();
+  const { items: wishlistItems } = useWishlist();
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [avatarOpen, setAvatarOpen] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
@@ -66,6 +70,19 @@ export function Header() {
                 </Link>
               </Button>
               <Button variant="ghost" size="icon" className="relative" asChild>
+                <Link to="/wishlist" onClick={() => haptic()}>
+                  <HiHeart className="size-5" />
+                  {wishlistItems.length > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="absolute -right-1 -top-1 size-5 rounded-full p-0 text-xs"
+                    >
+                      {wishlistItems.length}
+                    </Badge>
+                  )}
+                </Link>
+              </Button>
+              <Button variant="ghost" size="icon" className="relative" asChild>
                 <Link to="/cart">
                   <HiShoppingCart className="size-5" />
                   {totalItems > 0 && (
@@ -79,6 +96,21 @@ export function Header() {
                 </Link>
               </Button>
             </nav>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                haptic();
+                toggleTheme();
+              }}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? (
+                <HiSun className="size-5" />
+              ) : (
+                <HiMoon className="size-5" />
+              )}
+            </Button>
             {!loading &&
               (user ? (
                 <div className="relative" ref={avatarRef}>

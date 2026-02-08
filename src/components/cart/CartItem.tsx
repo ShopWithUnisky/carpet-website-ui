@@ -1,5 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { useCart, type CartItem as CartItemType } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { useToast } from "@/context/ToastContext";
+import { haptic } from "@/lib/haptic";
 
 type CartItemProps = {
   item: CartItemType;
@@ -7,7 +10,22 @@ type CartItemProps = {
 
 export function CartItem({ item }: CartItemProps) {
   const { updateQuantity, removeItem } = useCart();
+  const { addItem: addToWishlist } = useWishlist();
+  const { toast } = useToast();
   const lineTotal = item.price * item.quantity;
+
+  const handleMoveToWishlist = () => {
+    haptic();
+    addToWishlist({
+      id: item.variantId,
+      variantId: item.variantId,
+      name: item.name,
+      imageUrl: item.imageUrl,
+      price: item.price,
+    });
+    removeItem(item.variantId);
+    toast("Moved to wishlist");
+  };
 
   return (
     <div className="flex flex-col gap-4 border-b py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -26,7 +44,7 @@ export function CartItem({ item }: CartItemProps) {
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2 sm:gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <div className="flex items-center gap-1 rounded-md border">
           <Button
             variant="ghost"
@@ -50,6 +68,14 @@ export function CartItem({ item }: CartItemProps) {
         <p className="w-20 text-right font-medium">
           ${lineTotal.toFixed(2)}
         </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground hover:text-foreground shrink-0 text-xs"
+          onClick={handleMoveToWishlist}
+        >
+          Move to wishlist
+        </Button>
         <Button
           variant="ghost"
           size="icon"

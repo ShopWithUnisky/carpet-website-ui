@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { auth } from "@/lib/firebase";
 import { haptic } from "@/lib/haptic";
 import {
@@ -50,6 +51,7 @@ function getGoogleAuthErrorMessage(
 }
 
 export function AuthPage() {
+  useDocumentTitle("Sign in | Carpet Company");
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [googleError, setGoogleError] = useState("");

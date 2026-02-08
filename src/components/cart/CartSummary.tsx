@@ -17,7 +17,7 @@ export function CartSummary({ subtotal }: CartSummaryProps) {
         <span>${subtotal.toFixed(2)}</span>
       </p>
       <Button className="mt-6 w-full" size="lg" asChild>
-        <Link to="/auth">Proceed to checkout</Link>
+        <Link to="/checkout">Proceed to checkout</Link>
       </Button>
     </div>
   );

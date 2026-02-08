@@ -7,8 +7,11 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/context/ThemeContext";
 
 export function SettingsTab() {
+  const { theme, setTheme } = useTheme();
+
   return (
     <Card>
       <CardHeader>
@@ -18,6 +21,28 @@ export function SettingsTab() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <section className="space-y-2">
+          <h4 className="text-sm font-medium">Appearance</h4>
+          <p className="text-sm text-muted-foreground">
+            Choose light or dark theme.
+          </p>
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant={theme === "light" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTheme("light")}
+            >
+              Light
+            </Button>
+            <Button
+              variant={theme === "dark" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTheme("dark")}
+            >
+              Dark
+            </Button>
+          </div>
+        </section>
         <section className="space-y-2">
           <h4 className="text-sm font-medium">Notifications</h4>
           <p className="text-sm text-muted-foreground">

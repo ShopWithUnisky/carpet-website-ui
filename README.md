@@ -32,6 +32,13 @@ yarn build
 yarn preview
 ```
 
+## Firebase Auth on mobile
+
+Google sign-in prefers a popup; if the browser blocks it, the app falls back to redirect. On mobile, redirect can fail when the app is not on the same domain as Firebase Auth (third-party storage blocking). For production:
+
+- **Option A**: Deploy with **Firebase Hosting** and a **custom domain**, then set `authDomain` in Firebase config to that domain (e.g. `yourdomain.com`). Add `https://yourdomain.com/__/auth/handler` to your Google OAuth redirect URIs. See [Firebase redirect best practices](https://firebase.google.com/docs/auth/web/redirect-best-practices).
+- **Option B**: Use the app over **HTTPS** and ensure the site is in the device’s allowed list so the popup can open.
+
 ## Stack
 
 - React 19, TypeScript, Vite

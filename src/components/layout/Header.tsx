@@ -1,10 +1,23 @@
+import { useRef, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { haptic } from "@/lib/haptic";
 import { cn } from "@/lib/utils";
 import { HiHome, HiShoppingCart, HiViewGrid } from "react-icons/hi";
 import { Link, useLocation } from "react-router-dom";
+import type { User } from "firebase/auth";
+
+function getInitials(user: User): string {
+  if (user.displayName?.trim()) {
+    const parts = user.displayName.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  if (user.email) return user.email[0].toUpperCase();
+  return "?";
+}
 
 const bottomNavItems = [
   { to: "/", label: "Home", icon: HiHome },
@@ -12,8 +25,20 @@ const bottomNavItems = [
 ] as const;
 
 export function Header() {
+  const { user, loading, signOut } = useAuth();
   const { totalItems } = useCart();
   const location = useLocation();
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const avatarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!avatarOpen) return;
+    const close = (e: MouseEvent) => {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) setAvatarOpen(false);
+    };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [avatarOpen]);
 
   return (
     <>
@@ -54,11 +79,76 @@ export function Header() {
                 </Link>
               </Button>
             </nav>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/auth" onClick={() => haptic()}>
-                Sign In
-              </Link>
-            </Button>
+            {!loading &&
+              (user ? (
+                <div className="relative" ref={avatarRef}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      haptic();
+                      setAvatarOpen((o) => !o);
+                    }}
+                    className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border bg-muted ring-offset-background transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    aria-expanded={avatarOpen}
+                    aria-haspopup="true"
+                    aria-label="Account menu"
+                  >
+                    {user.photoURL ? (
+                      <img
+                        src={user.photoURL}
+                        alt=""
+                        className="size-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {getInitials(user)}
+                      </span>
+                    )}
+                  </button>
+                  {avatarOpen && (
+                    <div
+                      className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border bg-popover py-1 text-popover-foreground shadow-md"
+                      role="menu"
+                    >
+                      {user.email && (
+                        <div className="truncate px-3 py-2 text-sm text-muted-foreground">
+                          {user.email}
+                        </div>
+                      )}
+                      <Link
+                        to="/profile"
+                        role="menuitem"
+                        className="block w-full px-3 py-2 text-left text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => {
+                          haptic();
+                          setAvatarOpen(false);
+                        }}
+                      >
+                        Profile
+                      </Link>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="w-full px-3 py-2 text-left text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => {
+                          haptic();
+                          setAvatarOpen(false);
+                          signOut();
+                        }}
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/auth" onClick={() => haptic()}>
+                    Sign In
+                  </Link>
+                </Button>
+              ))}
           </div>
         </div>
       </header>

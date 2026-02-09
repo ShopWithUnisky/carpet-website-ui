@@ -17,21 +17,28 @@ L.Marker.prototype.options.icon = defaultIcon;
 
 const DEFAULT_CENTER: [number, number] = [20.5937, 78.9629]; // India
 
+/** Street-level zoom (e.g. after "Use current location"). */
+const STREET_ZOOM = 17;
+
 type MapPickerProps = {
   latitude: number | null;
   longitude: number | null;
   onLocationChange: (lat: number, lng: number) => void;
   height?: string;
+  /** When set, fly to position with this zoom (e.g. 17 for street level). */
+  flyToZoom?: number | null;
 };
 
 function MapClickHandler({
   latitude,
   longitude,
   onLocationChange,
+  flyToZoom,
 }: {
   latitude: number | null;
   longitude: number | null;
   onLocationChange: (lat: number, lng: number) => void;
+  flyToZoom?: number | null;
 }) {
   const map = useMapEvents({
     click(e) {
@@ -40,12 +47,13 @@ function MapClickHandler({
     },
   });
 
-  // When lat/lng change from outside, fly to the new position
+  // When lat/lng change from outside, fly to the new position (use flyToZoom for street-level)
   useEffect(() => {
     if (latitude != null && longitude != null) {
-      map.flyTo([latitude, longitude], map.getZoom());
+      const zoom = flyToZoom ?? map.getZoom();
+      map.flyTo([latitude, longitude], zoom);
     }
-  }, [latitude, longitude, map]);
+  }, [latitude, longitude, flyToZoom, map]);
 
   return null;
 }
@@ -55,18 +63,20 @@ export function MapPicker({
   longitude,
   onLocationChange,
   height = "280px",
+  flyToZoom = null,
 }: MapPickerProps) {
   const position: [number, number] =
     latitude != null && longitude != null
       ? [latitude, longitude]
       : DEFAULT_CENTER;
   const hasMarker = latitude != null && longitude != null;
+  const zoom = hasMarker ? (flyToZoom ?? 15) : 5;
 
   return (
     <div className="overflow-hidden rounded-lg border bg-muted/30" style={{ height }}>
       <MapContainer
         center={position}
-        zoom={hasMarker ? 15 : 5}
+        zoom={zoom}
         className="h-full w-full"
       >
         <TileLayer
@@ -77,6 +87,7 @@ export function MapPicker({
           latitude={latitude}
           longitude={longitude}
           onLocationChange={onLocationChange}
+          flyToZoom={flyToZoom}
         />
         {hasMarker && (
           <Marker position={position}>
@@ -87,3 +98,5 @@ export function MapPicker({
     </div>
   );
 }
+
+export { STREET_ZOOM };

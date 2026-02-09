@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -8,16 +9,46 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/context/ThemeContext";
+import { getSettings, saveSettings, type SavedSettings } from "@/lib/settings";
+import { useToast } from "@/context/ToastContext";
+import { haptic } from "@/lib/haptic";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const REGION_OPTIONS = ["USD · English", "EUR · English", "GBP · English"];
 
 export function SettingsTab() {
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
+  const [settings, setSettings] = useState<SavedSettings>({
+    notifyOrders: true,
+    notifyMarketing: false,
+    region: "USD · English",
+  });
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    setSettings(getSettings());
+    setLoaded(true);
+  }, []);
+
+  const handleSave = () => {
+    haptic();
+    saveSettings(settings);
+    toast("Preferences saved");
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Settings</CardTitle>
         <CardDescription>
-          Preferences and notifications
+          Preferences and notifications (saved locally)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -46,13 +77,17 @@ export function SettingsTab() {
         <section className="space-y-2">
           <h4 className="text-sm font-medium">Notifications</h4>
           <p className="text-sm text-muted-foreground">
-            Order updates and marketing (can be wired to a backend later).
+            Order updates and marketing. Save to persist.
           </p>
           <div className="flex items-center gap-2 pt-2">
             <input
               type="checkbox"
               id="notify-orders"
               className="size-4 rounded border-input"
+              checked={settings.notifyOrders}
+              onChange={(e) =>
+                setSettings((s) => ({ ...s, notifyOrders: e.target.checked }))
+              }
             />
             <Label htmlFor="notify-orders" className="font-normal cursor-pointer">
               Email me order updates
@@ -63,6 +98,10 @@ export function SettingsTab() {
               type="checkbox"
               id="notify-marketing"
               className="size-4 rounded border-input"
+              checked={settings.notifyMarketing}
+              onChange={(e) =>
+                setSettings((s) => ({ ...s, notifyMarketing: e.target.checked }))
+              }
             />
             <Label htmlFor="notify-marketing" className="font-normal cursor-pointer">
               News and offers
@@ -74,12 +113,28 @@ export function SettingsTab() {
           <p className="text-sm text-muted-foreground">
             Currency and language (placeholder).
           </p>
-          <p className="text-sm text-muted-foreground pt-1">
-            USD · English
-          </p>
+          {loaded && (
+            <Select
+              value={settings.region}
+              onValueChange={(value) =>
+                setSettings((s) => ({ ...s, region: value }))
+              }
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REGION_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </section>
         <div className="pt-4">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleSave}>
             Save preferences
           </Button>
         </div>

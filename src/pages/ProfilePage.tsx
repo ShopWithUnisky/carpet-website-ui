@@ -1,16 +1,23 @@
-import { Navigate } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ProfileDetailsTab } from "@/components/profile/ProfileDetailsTab";
-import { PaymentMethodsTab } from "@/components/profile/PaymentMethodsTab";
 import { HistoryTab } from "@/components/profile/HistoryTab";
+import { PaymentMethodsTab } from "@/components/profile/PaymentMethodsTab";
+import { ProfileDetailsTab } from "@/components/profile/ProfileDetailsTab";
 import { SettingsTab } from "@/components/profile/SettingsTab";
-import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { Heart, ShoppingCart } from "lucide-react";
+import { Link, Navigate } from "react-router-dom";
 
 export function ProfilePage() {
   useDocumentTitle("Profile | Carpet Company");
   const { user, loading } = useAuth();
+  const { totalItems: cartCount } = useCart();
+  const { items: wishlistItems } = useWishlist();
+  const wishlistCount = wishlistItems.length;
 
   if (loading) {
     return (
@@ -36,6 +43,21 @@ export function ProfilePage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Manage your account, payments, and preferences
         </p>
+      </div>
+
+      <div className="mb-6 flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/wishlist">
+            <Heart className="mr-2 size-4" />
+            Wishlist ({wishlistCount})
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/cart">
+            <ShoppingCart className="mr-2 size-4" />
+            Cart ({cartCount})
+          </Link>
+        </Button>
       </div>
 
       <Tabs defaultValue="profile" className="w-full">

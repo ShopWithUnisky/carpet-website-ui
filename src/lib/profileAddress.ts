@@ -5,6 +5,11 @@ export type SavedAddress = {
   id: string;
   name: string;
   address: string;
+  address2: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
   latitude: number | null;
   longitude: number | null;
 };
@@ -19,19 +24,46 @@ function legacyKey(uid: string): string {
   return `${LEGACY_KEY_PREFIX}${uid}`;
 }
 
+const defaultAddressFields = {
+  address2: "",
+  city: "",
+  state: "",
+  zip: "",
+  country: "United States",
+};
+
+function normalizeAddress(item: Record<string, unknown>): SavedAddress {
+  return {
+    id: typeof item.id === "string" ? item.id : crypto.randomUUID(),
+    name: typeof item.name === "string" ? item.name : "Home",
+    address: typeof item.address === "string" ? item.address : "",
+    address2: typeof item.address2 === "string" ? item.address2 : "",
+    city: typeof item.city === "string" ? item.city : "",
+    state: typeof item.state === "string" ? item.state : "",
+    zip: typeof item.zip === "string" ? item.zip : "",
+    country: typeof item.country === "string" ? item.country : "United States",
+    latitude:
+      typeof item.latitude === "number" && Number.isFinite(item.latitude)
+        ? item.latitude
+        : null,
+    longitude:
+      typeof item.longitude === "number" && Number.isFinite(item.longitude)
+        ? item.longitude
+        : null,
+  };
+}
+
 function parseAddresses(raw: string | null): SavedAddress[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item: unknown): item is SavedAddress =>
-        typeof item === "object" &&
-        item !== null &&
-        "id" in item &&
-        "name" in item &&
-        "address" in item
-    );
+    return parsed
+      .filter(
+        (item: unknown): item is Record<string, unknown> =>
+          typeof item === "object" && item !== null && "id" in item && "name" in item && "address" in item
+      )
+      .map(normalizeAddress);
   } catch {
     return [];
   }
@@ -62,6 +94,7 @@ function migrateFromLegacy(uid: string): SavedAddress[] {
         id: crypto.randomUUID(),
         name: "Home",
         address,
+        ...defaultAddressFields,
         latitude: lat,
         longitude: lng,
       },

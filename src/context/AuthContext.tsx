@@ -14,6 +14,7 @@ type AuthContextValue = {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -86,7 +87,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth);
   }, []);
 
-  const value: AuthContextValue = { user, loading, signOut };
+  const deleteAccount = useCallback(async () => {
+    const { deleteUser } = await import("firebase/auth");
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    await deleteUser(currentUser);
+  }, []);
+
+  const value: AuthContextValue = { user, loading, signOut, deleteAccount };
 
   return (
     <AuthContext.Provider value={value}>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
@@ -13,9 +13,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/context/ToastContext";
 import { haptic } from "@/lib/haptic";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { getProfileAddresses } from "@/lib/profileAddress";
+import { addOrder } from "@/lib/orders";
+import type { SavedAddress } from "@/lib/profileAddress";
 
 export function CheckoutPage() {
   useDocumentTitle("Checkout | Carpet Company");
@@ -36,6 +46,35 @@ export function CheckoutPage() {
     zip: "",
     country: "United States",
   });
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+
+  useEffect(() => {
+    if (user?.email) setContact((c) => ({ ...c, email: user.email ?? c.email }));
+    if (user?.displayName) setShipping((s) => ({ ...s, fullName: user.displayName ?? s.fullName }));
+  }, [user?.email, user?.displayName]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setSavedAddresses([]);
+      setSelectedAddressId("");
+      return;
+    }
+    setSavedAddresses(getProfileAddresses(user.uid));
+  }, [user?.uid]);
+
+  const applySavedAddress = (addr: SavedAddress) => {
+    setShipping((s) => ({
+      ...s,
+      address: addr.address,
+      address2: addr.address2 ?? "",
+      city: addr.city ?? "",
+      state: addr.state ?? "",
+      zip: addr.zip ?? "",
+      country: addr.country ?? "United States",
+      fullName: user?.displayName ?? s.fullName,
+    }));
+  };
 
   const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
@@ -56,6 +95,18 @@ export function CheckoutPage() {
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
     haptic();
+    if (user?.uid) {
+      addOrder(user.uid, {
+        items: items.map((i) => ({
+          variantId: i.variantId,
+          name: i.name,
+          imageUrl: i.imageUrl,
+          price: i.price,
+          quantity: i.quantity,
+        })),
+        subtotal,
+      });
+    }
     clearCart();
     toast("Order placed successfully");
     navigate("/checkout/complete", { state: { orderPlaced: true } });
@@ -118,6 +169,34 @@ export function CheckoutPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {savedAddresses.length > 0 && (
+                  <div className="grid gap-2">
+                    <Label>Ship to saved address</Label>
+                    <Select
+                      value={selectedAddressId || "none"}
+                      onValueChange={(value) => {
+                        setSelectedAddressId(value === "none" ? "" : value);
+                        const addr = savedAddresses.find((a) => a.id === value);
+                        if (addr) applySavedAddress(addr);
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Choose an address" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Enter manually</SelectItem>
+                        {savedAddresses.map((addr) => (
+                          <SelectItem key={addr.id} value={addr.id}>
+                            {addr.name} — {addr.address}
+                            {addr.city || addr.state || addr.zip
+                              ? `, ${[addr.city, addr.state, addr.zip].filter(Boolean).join(", ")}`
+                              : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="grid gap-2">
                   <Label htmlFor="checkout-name">Full name</Label>
                   <Input

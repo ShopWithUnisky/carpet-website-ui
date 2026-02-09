@@ -24,6 +24,7 @@ function getInitials(user: User): string {
 const bottomNavItems = [
   { to: "/", label: "Home", icon: HiHome },
   { to: "/carpets", label: "Carpets", icon: HiViewGrid },
+  { to: "/wishlist", label: "Wishlist", icon: HiHeart },
 ] as const;
 
 export function Header() {
@@ -200,13 +201,14 @@ export function Header() {
         >
           {bottomNavItems.map(({ to, icon: Icon }) => {
             const isActive = location.pathname === to;
+            const badgeCount = to === "/wishlist" ? wishlistItems.length : 0;
             return (
               <Link
                 key={to}
                 to={to}
                 onClick={() => haptic()}
                 className={cn(
-                  "flex size-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200",
+                  "relative flex size-10 shrink-0 items-center justify-center rounded-full transition-colors duration-200",
                   "hover:bg-primary/15 active:bg-primary/20",
                   isActive
                     ? "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:bg-primary/95"
@@ -214,6 +216,14 @@ export function Header() {
                 )}
               >
                 <Icon className="size-5 shrink-0" />
+                {to === "/wishlist" && badgeCount > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="absolute -right-0.5 -top-0.5 size-4 min-w-4 rounded-full p-0 text-[10px]"
+                  >
+                    {badgeCount}
+                  </Badge>
+                )}
               </Link>
             );
           })}

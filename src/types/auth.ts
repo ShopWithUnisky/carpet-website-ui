@@ -50,3 +50,17 @@ export interface GetUserProfileResponse {
   code?: string;
   statusCode?: number;
 }
+
+export interface UpdateUserProfileRequest {
+  name?: string;
+  phoneNumber?: string;
+  address?: UserProfileAddress;
+}
+
+export interface UpdateUserProfileResponse {
+  success: boolean;
+  user?: UserProfile;
+  message?: string;
+  code?: string;
+  statusCode?: number;
+}

@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
+import { authService } from "@/services/auth-service";
+import { useAuthStore } from "@/store/auth-store";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/context/ToastContext";
 import { haptic } from "@/lib/haptic";
@@ -51,6 +53,7 @@ type ProfileDetailsTabProps = {
 
 export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
   const { signOut, deleteAccount } = useAuth();
+  const userProfile = useAuthStore((s) => s.userProfile);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
@@ -73,7 +76,10 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
   /** When 17, map flies to street level (e.g. after "Use current location"). */
   const [mapFlyToZoom, setMapFlyToZoom] = useState<number | null>(null);
   const [editingDisplayName, setEditingDisplayName] = useState(false);
-  const [displayNameValue, setDisplayNameValue] = useState(user.displayName ?? "");
+  const displayNameFromUser = isFirebaseUser(user)
+    ? (user.displayName ?? "")
+    : (userProfile?.name ?? "");
+  const [displayNameValue, setDisplayNameValue] = useState(displayNameFromUser);
   const [savingName, setSavingName] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -84,19 +90,23 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
   }, [user.uid]);
 
   useEffect(() => {
-    setDisplayNameValue(user.displayName ?? "");
-  }, [user.displayName]);
+    setDisplayNameValue(displayNameFromUser);
+  }, [displayNameFromUser]);
 
   const handleSaveDisplayName = async () => {
-    if (!isFirebaseUser(user)) return;
     const trimmed = displayNameValue.trim();
-    if (trimmed === (user.displayName ?? "")) {
+    const current = isFirebaseUser(user) ? (user.displayName ?? "") : (userProfile?.name ?? "");
+    if (trimmed === current) {
       setEditingDisplayName(false);
       return;
     }
     setSavingName(true);
     try {
-      await updateProfile(user, { displayName: trimmed || null });
+      if (isFirebaseUser(user)) {
+        await updateProfile(user, { displayName: trimmed || null });
+      } else {
+        await authService.updateUserProfile({ name: trimmed || undefined });
+      }
       toast("Display name updated");
       setEditingDisplayName(false);
     } catch (e) {
@@ -259,61 +269,60 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
               />
             ) : (
               <div className="flex size-24 items-center justify-center rounded-full bg-muted text-2xl font-medium text-muted-foreground">
-                {user.displayName?.trim()
-                  ? user.displayName[0].toUpperCase()
-                  : user.email?.[0]?.toUpperCase() ?? "?"}
+                {(() => {
+                  const name = (isFirebaseUser(user) ? user.displayName : userProfile?.name)?.trim();
+                  return name ? name[0].toUpperCase() : user.email?.[0]?.toUpperCase() ?? "?";
+                })()}
               </div>
             )}
           </div>
-          {isFirebaseUser(user) && (
-            <div className="grid gap-2">
-              <Label htmlFor="profile-name">Display name</Label>
-              {editingDisplayName ? (
-                <div className="flex gap-2">
-                  <Input
-                    id="profile-name"
-                    value={displayNameValue}
-                    onChange={(e) => setDisplayNameValue(e.target.value)}
-                    placeholder="Your name"
-                    className="flex-1"
-                  />
-                  <Button size="sm" onClick={handleSaveDisplayName} disabled={savingName}>
-                    {savingName ? "Saving…" : "Save"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setDisplayNameValue(user.displayName ?? "");
-                      setEditingDisplayName(false);
-                    }}
-                    disabled={savingName}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Input
-                    id="profile-name"
-                    value={user.displayName ?? ""}
-                    readOnly
-                    className="bg-muted/50 flex-1"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setDisplayNameValue(user.displayName ?? "");
-                      setEditingDisplayName(true);
-                    }}
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="grid gap-2">
+            <Label htmlFor="profile-name">Display name</Label>
+            {editingDisplayName ? (
+              <div className="flex gap-2">
+                <Input
+                  id="profile-name"
+                  value={displayNameValue}
+                  onChange={(e) => setDisplayNameValue(e.target.value)}
+                  placeholder="Your name"
+                  className="flex-1"
+                />
+                <Button size="sm" onClick={handleSaveDisplayName} disabled={savingName}>
+                  {savingName ? "Saving…" : "Save"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setDisplayNameValue(displayNameFromUser);
+                    setEditingDisplayName(false);
+                  }}
+                  disabled={savingName}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  id="profile-name"
+                  value={displayNameFromUser}
+                  readOnly
+                  className="bg-muted/50 flex-1"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setDisplayNameValue(displayNameFromUser);
+                    setEditingDisplayName(true);
+                  }}
+                >
+                  <Pencil className="size-4" />
+                </Button>
+              </div>
+            )}
+          </div>
           <div className="grid gap-2">
             <Label htmlFor="profile-email">Email</Label>
             <Input
@@ -324,17 +333,20 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
               className="bg-muted/50"
             />
           </div>
-          {user.phoneNumber && (
-            <div className="grid gap-2">
-              <Label htmlFor="profile-phone">Phone</Label>
-              <Input
-                id="profile-phone"
-                value={user.phoneNumber}
-                readOnly
-                className="bg-muted/50"
-              />
-            </div>
-          )}
+          {(() => {
+            const phone = isFirebaseUser(user) ? user.phoneNumber : userProfile?.phoneNumber;
+            return phone ? (
+              <div className="grid gap-2">
+                <Label htmlFor="profile-phone">Phone</Label>
+                <Input
+                  id="profile-phone"
+                  value={phone}
+                  readOnly
+                  className="bg-muted/50"
+                />
+              </div>
+            ) : null;
+          })()}
           <div className="flex flex-col gap-2 pt-4 border-t">
             <Button variant="outline" className="w-full sm:w-auto" onClick={handleSignOut}>
               <LogOut className="mr-2 size-4" />

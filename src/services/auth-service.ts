@@ -10,6 +10,8 @@ import type {
   GetUserProfileResponse,
   SendEmailOtpRequest,
   SendEmailOtpResponse,
+  UpdateUserProfileRequest,
+  UpdateUserProfileResponse,
   UserProfile,
   VerifyEmailOtpRequest,
   VerifyEmailOtpResponse,
@@ -25,6 +27,8 @@ interface IAuthService {
   readonly hydrateFromStorage: () => void;
   /** Fetch current user profile (requires auth token). */
   readonly getUserProfile: () => Promise<UserProfile | null>;
+  /** Update current user profile (requires auth token). */
+  readonly updateUserProfile: (payload: UpdateUserProfileRequest) => Promise<UserProfile | null>;
 }
 
 class AuthService implements IAuthService {
@@ -137,6 +141,23 @@ class AuthService implements IAuthService {
       useAuthStore.setState({ profileLoading: false });
       throw error;
     }
+  }
+
+  public async updateUserProfile(
+    payload: UpdateUserProfileRequest
+  ): Promise<UserProfile | null> {
+    const url = base_url + endpoints.update_user_profile;
+    const response = await apiCallWithAuth<
+      UpdateUserProfileResponse,
+      undefined,
+      UpdateUserProfileRequest
+    >("PATCH", url, undefined, payload);
+    const profile = response.success ? response.user ?? null : null;
+    if (profile) {
+      useAuthStore.setState({ userProfile: profile });
+      return profile;
+    }
+    return null;
   }
 }
 

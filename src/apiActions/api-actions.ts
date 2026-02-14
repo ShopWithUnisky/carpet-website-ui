@@ -59,9 +59,9 @@ export const apiCall = async <T, P, B>(
 
     if (axiosError.response) {
       const errorBody = axiosError.response.data;
-      console.error(String(errorBody?.error));
-      // console.error("API error:", axiosError.response.data);
-      throw new Error(`API error:`);
+      const message = getErrorMessage(errorBody);
+      console.error(message);
+      throw new Error(message);
     } else if (axiosError.request) {
       throw new Error("No response received from the server");
     } else {
@@ -89,7 +89,7 @@ export const apiCallWithAuth = async <T, P, B>(
     params,
     withCredentials: true,
     headers: {
-      "X-AUTH-TOKEN": token,
+      token: token,
       "Content-Type": "application/json",
     },
     responseType: options.responseType,
@@ -134,7 +134,7 @@ export const apiCallWithFormData = async <T, P>(
     params,
     withCredentials: true,
     headers: {
-      "X-AUTH-TOKEN": token,
+      token: token,
       "Content-Type": "multipart/form-data",
     },
     data: body,

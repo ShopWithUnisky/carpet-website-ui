@@ -9,9 +9,9 @@ import { haptic } from "@/lib/haptic";
 import { cn } from "@/lib/utils";
 import { HiHome, HiShoppingCart, HiViewGrid, HiHeart, HiSun, HiMoon } from "react-icons/hi";
 import { Link, useLocation } from "react-router-dom";
-import type { User } from "firebase/auth";
+import type { AppUser } from "@/context/AuthContext";
 
-function getInitials(user: User): string {
+function getInitials(user: AppUser): string {
   if (user.displayName?.trim()) {
     const parts = user.displayName.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();

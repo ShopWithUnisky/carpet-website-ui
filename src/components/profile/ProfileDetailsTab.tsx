@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { User } from "firebase/auth";
 import { updateProfile } from "firebase/auth";
+import type { AppUser } from "@/context/AuthContext";
 import {
   Card,
   CardContent,
@@ -40,8 +41,12 @@ import {
 import { MapPicker, STREET_ZOOM } from "@/components/profile/MapPicker";
 import { MapPin, Pencil, Plus, Trash2, Locate, LogOut, UserMinus } from "lucide-react";
 
+function isFirebaseUser(u: AppUser): u is User {
+  return !u.uid.startsWith("backend-");
+}
+
 type ProfileDetailsTabProps = {
-  user: User;
+  user: AppUser;
 };
 
 export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
@@ -83,6 +88,7 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
   }, [user.displayName]);
 
   const handleSaveDisplayName = async () => {
+    if (!isFirebaseUser(user)) return;
     const trimmed = displayNameValue.trim();
     if (trimmed === (user.displayName ?? "")) {
       setEditingDisplayName(false);
@@ -108,6 +114,7 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
   };
 
   const handleDeleteAccount = async () => {
+    if (!isFirebaseUser(user)) return;
     if (!confirm("Permanently delete your account? This cannot be undone.")) return;
     haptic();
     setDeleting(true);
@@ -258,53 +265,55 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
               </div>
             )}
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="profile-name">Display name</Label>
-            {editingDisplayName ? (
-              <div className="flex gap-2">
-                <Input
-                  id="profile-name"
-                  value={displayNameValue}
-                  onChange={(e) => setDisplayNameValue(e.target.value)}
-                  placeholder="Your name"
-                  className="flex-1"
-                />
-                <Button size="sm" onClick={handleSaveDisplayName} disabled={savingName}>
-                  {savingName ? "Saving…" : "Save"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setDisplayNameValue(user.displayName ?? "");
-                    setEditingDisplayName(false);
-                  }}
-                  disabled={savingName}
-                >
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Input
-                  id="profile-name"
-                  value={user.displayName ?? ""}
-                  readOnly
-                  className="bg-muted/50 flex-1"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setDisplayNameValue(user.displayName ?? "");
-                    setEditingDisplayName(true);
-                  }}
-                >
-                  <Pencil className="size-4" />
-                </Button>
-              </div>
-            )}
-          </div>
+          {isFirebaseUser(user) && (
+            <div className="grid gap-2">
+              <Label htmlFor="profile-name">Display name</Label>
+              {editingDisplayName ? (
+                <div className="flex gap-2">
+                  <Input
+                    id="profile-name"
+                    value={displayNameValue}
+                    onChange={(e) => setDisplayNameValue(e.target.value)}
+                    placeholder="Your name"
+                    className="flex-1"
+                  />
+                  <Button size="sm" onClick={handleSaveDisplayName} disabled={savingName}>
+                    {savingName ? "Saving…" : "Save"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setDisplayNameValue(user.displayName ?? "");
+                      setEditingDisplayName(false);
+                    }}
+                    disabled={savingName}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    id="profile-name"
+                    value={user.displayName ?? ""}
+                    readOnly
+                    className="bg-muted/50 flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setDisplayNameValue(user.displayName ?? "");
+                      setEditingDisplayName(true);
+                    }}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="grid gap-2">
             <Label htmlFor="profile-email">Email</Label>
             <Input
@@ -331,15 +340,17 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
               <LogOut className="mr-2 size-4" />
               Sign out
             </Button>
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={handleDeleteAccount}
-              disabled={deleting}
-            >
-              <UserMinus className="mr-2 size-4" />
-              {deleting ? "Deleting…" : "Delete account"}
-            </Button>
+            {isFirebaseUser(user) && (
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+              >
+                <UserMinus className="mr-2 size-4" />
+                {deleting ? "Deleting…" : "Delete account"}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

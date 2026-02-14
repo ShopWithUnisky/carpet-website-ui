@@ -1,6 +1,4 @@
-import { PhoneSignInForm } from "@/components/auth/PhoneSignInForm";
-import { SignInForm } from "@/components/auth/SignInForm";
-import { SignUpForm } from "@/components/auth/SignUpForm";
+import { EmailOtpSignInForm } from "@/components/auth/EmailOtpSignInForm";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { auth } from "@/lib/firebase";
@@ -45,13 +42,13 @@ function getGoogleAuthErrorMessage(
         : "This domain is not authorized for sign-in. Add your app's domain in Firebase Console → Authentication → Settings → Authorized domains.";
     default:
       return usedRedirect
-        ? "Redirect sign-in failed. Try again or use email/password."
+        ? "Redirect sign-in failed. Try again or use email."
         : "Sign in with Google failed. Please try again.";
   }
 }
 
 export function AuthPage() {
-  useDocumentTitle("Sign in | Carpet Company");
+  useDocumentTitle("Log in | Carpet Company");
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [googleError, setGoogleError] = useState("");
@@ -114,7 +111,7 @@ export function AuthPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Welcome</CardTitle>
           <CardDescription>
-            Sign in to your account or create a new one
+            Log in with Google or your email
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -155,22 +152,9 @@ export function AuthPage() {
             </div>
           </div>
 
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="phone">Phone</TabsTrigger>
-              <TabsTrigger value="signin">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Sign up</TabsTrigger>
-            </TabsList>
-            <TabsContent value="phone" className="mt-0">
-              <PhoneSignInForm />
-            </TabsContent>
-            <TabsContent value="signin" className="mt-6">
-              <SignInForm />
-            </TabsContent>
-            <TabsContent value="signup" className="mt-6">
-              <SignUpForm />
-            </TabsContent>
-          </Tabs>
+          <div className="mt-0">
+            <EmailOtpSignInForm />
+          </div>
 
           {googleError && (
             <p className="mt-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">

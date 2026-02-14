@@ -9,9 +9,30 @@ import {
 import type { User } from "firebase/auth";
 import { getRedirectResult, onAuthStateChanged } from "firebase/auth";
 import { auth, authReady } from "@/lib/firebase";
+import { authService } from "@/services/auth-service";
+import { useAuthStore } from "@/store/auth-store";
+
+/** User from Firebase or synthetic user from backend email-OTP login */
+export type AppUser = User | BackendAppUser;
+
+export interface BackendAppUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}
+
+function backendAppUser(email: string): BackendAppUser {
+  return {
+    uid: `backend-${email}`,
+    email,
+    displayName: null,
+    photoURL: null,
+  }
+}
 
 type AuthContextValue = {
-  user: User | null;
+  user: AppUser | null;
   loading: boolean;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -32,8 +53,14 @@ function getRedirectResultOnce() {
 const REDIRECT_RESULT_TIMEOUT_MS = 15_000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const backendSession = useAuthStore((s) => s.backendSession);
+
+  // Hydrate backend session from localStorage on mount (token only)
+  useEffect(() => {
+    authService.hydrateFromStorage();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const setStateFromAuth = (u: User | null) => {
       if (!cancelled) {
-        setUser(u);
+        setFirebaseUser(u);
         setLoading(false);
       }
     };
@@ -82,10 +109,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const user: AppUser | null =
+    firebaseUser ??
+    (backendSession ? backendAppUser(backendSession.email) : null);
+
   const signOut = useCallback(async () => {
-    const { signOut: firebaseSignOut } = await import("firebase/auth");
-    await firebaseSignOut(auth);
-  }, []);
+    if (firebaseUser) {
+      const { signOut: firebaseSignOut } = await import("firebase/auth");
+      await firebaseSignOut(auth);
+    } else if (backendSession) {
+      authService.clearBackendSession();
+    }
+  }, [firebaseUser, backendSession]);
 
   const deleteAccount = useCallback(async () => {
     const { deleteUser } = await import("firebase/auth");
@@ -95,6 +130,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value: AuthContextValue = { user, loading, signOut, deleteAccount };
+
+  // Sync backend session from store into context when it's set after verify
+  useEffect(() => {
+    if (backendSession && !firebaseUser) {
+      setLoading(false);
+    }
+  }, [backendSession, firebaseUser]);
+
+  // Fetch user profile on load when logged in with backend token
+  useEffect(() => {
+    if (!backendSession || firebaseUser) return;
+    authService.getUserProfile().catch(() => {
+      // Token may be expired or invalid; ignore, user can sign in again
+    });
+  }, [backendSession, firebaseUser]);
 
   return (
     <AuthContext.Provider value={value}>

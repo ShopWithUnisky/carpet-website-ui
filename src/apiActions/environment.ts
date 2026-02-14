@@ -6,4 +6,9 @@ export const endpoints = {
   send_email_otp: "/auth/send-email-otp",
   verify_email_otp: "/auth/verify-email-otp",
   get_user_profile: "/users/profile",
+  get_cart: "/cart",
+  add_cart: "/cart/add",
+  update_cart: "/cart/update",
+  remove_cart_item: "/cart/item/:productId",
+  clear_cart: "/cart/clear",
 };

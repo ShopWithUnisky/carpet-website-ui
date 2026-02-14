@@ -3,62 +3,45 @@ import {
   useContext,
   useCallback,
   useMemo,
-  useState,
+  useEffect,
   type ReactNode,
 } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { wishlistService } from "@/services/wishlist-service";
+import { useWishlistStore } from "@/store/wishlist-store";
+import type { WishlistItem } from "@/types/wishlist";
 
-export type WishlistItem = {
-  id: string;
-  variantId: string;
-  name: string;
-  imageUrl: string;
-  price: number;
-};
+export type { WishlistItem };
 
 type WishlistContextValue = {
   items: WishlistItem[];
+  isLoading: boolean;
   addItem: (item: WishlistItem) => void;
   removeItem: (variantId: string) => void;
   isInWishlist: (variantId: string) => boolean;
 };
 
-const WISHLIST_STORAGE_KEY = "carpet-wishlist";
-
-function loadWishlist(): WishlistItem[] {
-  try {
-    const raw = localStorage.getItem(WISHLIST_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as WishlistItem[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveWishlist(items: WishlistItem[]) {
-  localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(items));
-}
-
 const WishlistContext = createContext<WishlistContextValue | null>(null);
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<WishlistItem[]>(loadWishlist);
+  const { user } = useAuth();
+  const items = useWishlistStore((s) => s.wishlist);
+  const isLoading = useWishlistStore((s) => s.isLoading);
+
+  useEffect(() => {
+    if (user) {
+      wishlistService.getWishlist().catch(() => {});
+    } else {
+      wishlistService.clearWishlistStore();
+    }
+  }, [user]);
 
   const addItem = useCallback((item: WishlistItem) => {
-    setItems((prev) => {
-      if (prev.some((i) => i.variantId === item.variantId)) return prev;
-      const next = [...prev, item];
-      saveWishlist(next);
-      return next;
-    });
+    wishlistService.addItem(item.variantId).catch(() => {});
   }, []);
 
   const removeItem = useCallback((variantId: string) => {
-    setItems((prev) => {
-      const next = prev.filter((i) => i.variantId !== variantId);
-      saveWishlist(next);
-      return next;
-    });
+    wishlistService.removeItem(variantId).catch(() => {});
   }, []);
 
   const isInWishlist = useCallback(
@@ -67,12 +50,20 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<WishlistContextValue>(
-    () => ({ items, addItem, removeItem, isInWishlist }),
-    [items, addItem, removeItem, isInWishlist]
+    () => ({
+      items,
+      isLoading,
+      addItem,
+      removeItem,
+      isInWishlist,
+    }),
+    [items, isLoading, addItem, removeItem, isInWishlist]
   );
 
   return (
-    <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>
+    <WishlistContext.Provider value={value}>
+      {children}
+    </WishlistContext.Provider>
   );
 }
 

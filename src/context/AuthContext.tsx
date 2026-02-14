@@ -10,6 +10,8 @@ import type { User } from "firebase/auth";
 import { getRedirectResult, onAuthStateChanged } from "firebase/auth";
 import { auth, authReady } from "@/lib/firebase";
 import { authService } from "@/services/auth-service";
+import { cartService } from "@/services/cart-service";
+import { wishlistService } from "@/services/wishlist-service";
 import { useAuthStore } from "@/store/auth-store";
 
 /** User from Firebase or synthetic user from backend email-OTP login */
@@ -117,8 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (firebaseUser) {
       const { signOut: firebaseSignOut } = await import("firebase/auth");
       await firebaseSignOut(auth);
+      cartService.clearCartStore();
+      wishlistService.clearWishlistStore();
     } else if (backendSession) {
       authService.clearBackendSession();
+      cartService.clearCartStore();
+      wishlistService.clearWishlistStore();
     }
   }, [firebaseUser, backendSession]);
 

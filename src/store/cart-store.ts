@@ -2,11 +2,11 @@ import type { CartItem } from "@/types/cart";
 import { create } from "zustand";
 
 interface CartStore {
-  items: CartItem[];
+  cart: CartItem[];
   isLoading: boolean;
 }
 
 export const useCartStore = create<CartStore>(() => ({
-  items: [],
+  cart: [],
   isLoading: false,
 }));

@@ -11,4 +11,8 @@ export const endpoints = {
   update_cart: "/cart/update",
   remove_cart_item: "/cart/item/:productId",
   clear_cart: "/cart/clear",
+  get_wishlist: "/wishlist",
+  add_wishlist: "/wishlist/add",
+  toggle_wishlist: "/wishlist/toggle",
+  remove_wishlist_item: "/wishlist/item/:id",
 };

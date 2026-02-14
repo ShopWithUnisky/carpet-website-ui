@@ -54,8 +54,8 @@ class CartService implements ICartService {
         undefined
       >("GET", url);
       const raw = response.data?.items ?? [];
-      const items = mapLinesToItems(Array.isArray(raw) ? raw : []);
-      useCartStore.setState({ items, isLoading: false });
+      const cart = mapLinesToItems(Array.isArray(raw) ? raw : []);
+      useCartStore.setState({ cart, isLoading: false });
     } catch (error) {
       useCartStore.setState({ isLoading: false });
       throw error;
@@ -72,7 +72,7 @@ class CartService implements ICartService {
     >("POST", url, undefined, body);
     const raw = response.data?.items ?? [];
     if (Array.isArray(raw)) {
-      useCartStore.setState({ items: mapLinesToItems(raw) });
+      useCartStore.setState({ cart: mapLinesToItems(raw) });
     } else {
       await this.getCart();
     }
@@ -88,7 +88,7 @@ class CartService implements ICartService {
     >("POST", url, undefined, body);
     const raw = response.data?.items ?? [];
     if (Array.isArray(raw)) {
-      useCartStore.setState({ items: mapLinesToItems(raw) });
+      useCartStore.setState({ cart: mapLinesToItems(raw) });
     } else {
       await this.getCart();
     }
@@ -106,7 +106,7 @@ class CartService implements ICartService {
     >("DELETE", url);
     const raw = response.data?.items ?? [];
     if (Array.isArray(raw)) {
-      useCartStore.setState({ items: mapLinesToItems(raw) });
+      useCartStore.setState({ cart: mapLinesToItems(raw) });
     } else {
       await this.getCart();
     }
@@ -118,11 +118,11 @@ class CartService implements ICartService {
       "POST",
       url
     );
-    useCartStore.setState({ items: [] });
+    useCartStore.setState({ cart: [] });
   }
 
   public clearCartStore(): void {
-    useCartStore.setState({ items: [] });
+    useCartStore.setState({ cart: [] });
   }
 }
 

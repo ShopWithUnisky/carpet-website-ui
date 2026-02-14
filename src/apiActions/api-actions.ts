@@ -31,7 +31,8 @@ const getTokens = async (): Promise<Tokens> => {
   if (!token) {
     throw new Error("No token found");
   }
-  return { token };
+  const tokenWithPrefix = "Bearer " + token;
+  return { token: tokenWithPrefix };
 };
 
 export const apiCall = async <T, P, B>(

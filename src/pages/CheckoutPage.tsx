@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useAuthStore } from "@/store/auth-store";
 import {
   Card,
   CardContent,
@@ -27,11 +28,15 @@ import { formatRupees } from "@/lib/utils";
 import { getProfileAddresses } from "@/lib/profileAddress";
 import { addOrder } from "@/lib/orders";
 import type { SavedAddress } from "@/lib/profileAddress";
+import { Mail, Phone, MapPin, ShoppingBag, ShieldCheck } from "lucide-react";
+
+const DEFAULT_COUNTRY = "India";
 
 export function CheckoutPage() {
   useDocumentTitle("Checkout | Carpet Company");
   const { items, totalItems, clearCart } = useCart();
   const { user } = useAuth();
+  const userProfile = useAuthStore((s) => s.userProfile);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [contact, setContact] = useState({
@@ -39,30 +44,68 @@ export function CheckoutPage() {
     phone: "",
   });
   const [shipping, setShipping] = useState({
-    fullName: user?.displayName ?? "",
+    fullName: "",
     address: "",
     address2: "",
     city: "",
     state: "",
     zip: "",
-    country: "United States",
+    country: DEFAULT_COUNTRY,
   });
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  const hasAppliedProfileRef = useRef(false);
 
+  // Sync email and name from user / userProfile
   useEffect(() => {
-    if (user?.email) setContact((c) => ({ ...c, email: user.email ?? c.email }));
-    if (user?.displayName) setShipping((s) => ({ ...s, fullName: user.displayName ?? s.fullName }));
-  }, [user?.email, user?.displayName]);
+    const email = user?.email ?? "";
+    const name = user?.displayName ?? userProfile?.name ?? "";
+    if (email) setContact((c) => ({ ...c, email }));
+    if (name) setShipping((s) => ({ ...s, fullName: name }));
+  }, [user?.email, user?.displayName, userProfile?.name]);
 
+  // Sync phone from userProfile
+  useEffect(() => {
+    if (userProfile?.phoneNumber)
+      setContact((c) => ({ ...c, phone: userProfile.phoneNumber ?? c.phone }));
+  }, [userProfile?.phoneNumber]);
+
+  // Load saved addresses and pre-fill from first saved address or profile address
   useEffect(() => {
     if (!user?.uid) {
       setSavedAddresses([]);
       setSelectedAddressId("");
       return;
     }
-    setSavedAddresses(getProfileAddresses(user.uid));
-  }, [user?.uid]);
+    const addresses = getProfileAddresses(user.uid);
+    setSavedAddresses(addresses);
+
+    if (addresses.length > 0) {
+      setSelectedAddressId(addresses[0].id);
+      const first = addresses[0];
+      setShipping((s) => ({
+        ...s,
+        fullName: user?.displayName ?? userProfile?.name ?? s.fullName,
+        address: first.address,
+        address2: first.address2 ?? "",
+        city: first.city ?? "",
+        state: first.state ?? "",
+        zip: first.zip ?? "",
+        country: first.country ?? DEFAULT_COUNTRY,
+      }));
+    } else if (userProfile?.address && !hasAppliedProfileRef.current) {
+      hasAppliedProfileRef.current = true;
+      const a = userProfile.address;
+      setShipping((s) => ({
+        ...s,
+        address: a.addressLine ?? "",
+        city: a.city ?? "",
+        state: a.state ?? "",
+        zip: a.pincode ?? "",
+        country: a.country ?? DEFAULT_COUNTRY,
+      }));
+    }
+  }, [user?.uid, userProfile?.address]);
 
   const applySavedAddress = (addr: SavedAddress) => {
     setShipping((s) => ({
@@ -72,8 +115,8 @@ export function CheckoutPage() {
       city: addr.city ?? "",
       state: addr.state ?? "",
       zip: addr.zip ?? "",
-      country: addr.country ?? "United States",
-      fullName: user?.displayName ?? s.fullName,
+      country: addr.country ?? DEFAULT_COUNTRY,
+      fullName: user?.displayName ?? userProfile?.name ?? s.fullName,
     }));
   };
 
@@ -81,12 +124,15 @@ export function CheckoutPage() {
 
   if (items.length === 0) {
     return (
-      <div className="container mx-auto max-w-2xl px-4 py-16 text-center">
-        <h1 className="text-2xl font-semibold">Your cart is empty</h1>
-        <p className="mt-2 text-muted-foreground">
+      <div className="container mx-auto max-w-md px-4 py-20 text-center">
+        <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-muted">
+          <ShoppingBag className="size-8 text-muted-foreground" />
+        </div>
+        <h1 className="mt-6 text-xl font-semibold tracking-tight">Your cart is empty</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
           Add items from the collection to checkout.
         </p>
-        <Button asChild className="mt-6">
+        <Button asChild className="mt-6" size="lg">
           <Link to="/carpets">Browse carpets</Link>
         </Button>
       </div>
@@ -116,9 +162,11 @@ export function CheckoutPage() {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Checkout</h1>
+        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          Checkout
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Enter your details below to complete your order
+          Review your details and complete your order
         </p>
       </div>
 
@@ -126,16 +174,25 @@ export function CheckoutPage() {
         <div className="grid gap-8 lg:grid-cols-5">
           {/* Left: Contact & Shipping */}
           <div className="space-y-6 lg:col-span-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact information</CardTitle>
-                <CardDescription>
-                  We’ll use this to send order updates and receipts
+            {/* Step 1: Contact */}
+            <Card className="border-border/80 shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                    1
+                  </span>
+                  <CardTitle className="text-lg">Contact information</CardTitle>
+                </div>
+                <CardDescription className="mt-1">
+                  We’ll use this for order updates and receipts
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="checkout-email">Email</Label>
+                  <Label htmlFor="checkout-email" className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="size-4" />
+                    Email
+                  </Label>
                   <Input
                     id="checkout-email"
                     type="email"
@@ -144,35 +201,47 @@ export function CheckoutPage() {
                     onChange={(e) =>
                       setContact((c) => ({ ...c, email: e.target.value }))
                     }
+                    className="h-10"
                     required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="checkout-phone">Phone (optional)</Label>
+                  <Label htmlFor="checkout-phone" className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="size-4" />
+                    Phone (optional)
+                  </Label>
                   <Input
                     id="checkout-phone"
                     type="tel"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="e.g. 98765 43210"
                     value={contact.phone}
                     onChange={(e) =>
                       setContact((c) => ({ ...c, phone: e.target.value }))
                     }
+                    className="h-10"
                   />
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Shipping address</CardTitle>
-                <CardDescription>
+            {/* Step 2: Shipping */}
+            <Card className="border-border/80 shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                    2
+                  </span>
+                  <CardTitle className="text-lg">Shipping address</CardTitle>
+                </div>
+                <CardDescription className="mt-1 flex items-center gap-1.5">
+                  <MapPin className="size-4" />
                   Where should we deliver your order?
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {savedAddresses.length > 0 && (
                   <div className="grid gap-2">
-                    <Label>Ship to saved address</Label>
+                    <Label className="text-muted-foreground">Ship to saved address</Label>
                     <Select
                       value={selectedAddressId || "none"}
                       onValueChange={(value) => {
@@ -181,7 +250,7 @@ export function CheckoutPage() {
                         if (addr) applySavedAddress(addr);
                       }}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="h-10 w-full">
                         <SelectValue placeholder="Choose an address" />
                       </SelectTrigger>
                       <SelectContent>
@@ -202,37 +271,40 @@ export function CheckoutPage() {
                   <Label htmlFor="checkout-name">Full name</Label>
                   <Input
                     id="checkout-name"
-                    placeholder="Jane Doe"
+                    placeholder="Your name"
                     value={shipping.fullName}
                     onChange={(e) =>
                       setShipping((s) => ({ ...s, fullName: e.target.value }))
                     }
+                    className="h-10"
                     required
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="checkout-address">Address</Label>
+                  <Label htmlFor="checkout-address">Address line 1</Label>
                   <Input
                     id="checkout-address"
-                    placeholder="123 Main St"
+                    placeholder="Street address"
                     value={shipping.address}
                     onChange={(e) =>
                       setShipping((s) => ({ ...s, address: e.target.value }))
                     }
+                    className="h-10"
                     required
                   />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="checkout-address2">
-                    Apartment, suite, etc. (optional)
+                    Address line 2 (optional)
                   </Label>
                   <Input
                     id="checkout-address2"
-                    placeholder="Apt 4"
+                    placeholder="Apartment, building, etc."
                     value={shipping.address2}
                     onChange={(e) =>
                       setShipping((s) => ({ ...s, address2: e.target.value }))
                     }
+                    className="h-10"
                   />
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
@@ -240,34 +312,38 @@ export function CheckoutPage() {
                     <Label htmlFor="checkout-city">City</Label>
                     <Input
                       id="checkout-city"
+                      placeholder="e.g. Mumbai"
                       value={shipping.city}
                       onChange={(e) =>
                         setShipping((s) => ({ ...s, city: e.target.value }))
                       }
+                      className="h-10"
                       required
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="checkout-state">State / Province</Label>
+                    <Label htmlFor="checkout-state">State</Label>
                     <Input
                       id="checkout-state"
-                      placeholder="CA"
+                      placeholder="e.g. Maharashtra"
                       value={shipping.state}
                       onChange={(e) =>
                         setShipping((s) => ({ ...s, state: e.target.value }))
                       }
+                      className="h-10"
                       required
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="checkout-zip">ZIP / Postal code</Label>
+                    <Label htmlFor="checkout-zip">Pincode</Label>
                     <Input
                       id="checkout-zip"
-                      placeholder="94103"
+                      placeholder="e.g. 400001"
                       value={shipping.zip}
                       onChange={(e) =>
                         setShipping((s) => ({ ...s, zip: e.target.value }))
                       }
+                      className="h-10"
                       required
                     />
                   </div>
@@ -276,10 +352,12 @@ export function CheckoutPage() {
                   <Label htmlFor="checkout-country">Country</Label>
                   <Input
                     id="checkout-country"
+                    placeholder="India"
                     value={shipping.country}
                     onChange={(e) =>
                       setShipping((s) => ({ ...s, country: e.target.value }))
                     }
+                    className="h-10"
                     required
                   />
                 </div>
@@ -290,22 +368,29 @@ export function CheckoutPage() {
           {/* Right: Order summary (sticky on desktop) */}
           <div className="lg:col-span-2">
             <div className="lg:sticky lg:top-24">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order summary</CardTitle>
+              <Card className="border-border/80 shadow-sm">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <ShoppingBag className="size-5 text-muted-foreground" />
+                      Order summary
+                    </CardTitle>
+                    <Button variant="ghost" size="sm" className="text-xs" asChild>
+                      <Link to="/cart">Edit cart</Link>
+                    </Button>
+                  </div>
                   <CardDescription>
-                    {totalItems} {totalItems === 1 ? "item" : "items"} in your
-                    order
+                    {totalItems} {totalItems === 1 ? "item" : "items"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <ul className="max-h-64 space-y-3 overflow-y-auto">
+                  <ul className="max-h-72 space-y-3 overflow-y-auto pr-1">
                     {items.map((item) => (
                       <li
                         key={item.variantId}
                         className="flex gap-3 text-sm"
                       >
-                        <div className="size-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                        <div className="size-16 shrink-0 overflow-hidden rounded-lg border bg-muted">
                           <img
                             src={item.imageUrl}
                             alt={item.name}
@@ -313,9 +398,12 @@ export function CheckoutPage() {
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{item.name}</p>
-                          <p className="text-muted-foreground">
-                            Qty {item.quantity} · {formatRupees(item.price * item.quantity)}
+                          <p className="font-medium leading-tight">{item.name}</p>
+                          <p className="mt-0.5 text-muted-foreground">
+                            Qty {item.quantity} × {formatRupees(item.price)}
+                          </p>
+                          <p className="mt-1 font-medium">
+                            {formatRupees(item.price * item.quantity)}
                           </p>
                         </div>
                       </li>
@@ -329,27 +417,31 @@ export function CheckoutPage() {
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Shipping</span>
-                      <span>Calculated at next step</span>
+                      <span className="text-xs">At confirmation</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Tax</span>
-                      <span>Calculated at next step</span>
+                      <span className="text-xs">As applicable</span>
                     </div>
                   </div>
                   <Separator />
-                  <div className="flex justify-between text-base font-semibold">
+                  <div className="flex justify-between text-lg font-semibold">
                     <span>Total</span>
                     <span>{formatRupees(subtotal)}</span>
                   </div>
-                  <Button type="submit" className="w-full" size="lg">
+                  <Button type="submit" className="h-11 w-full" size="lg">
                     Place order
                   </Button>
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                    <ShieldCheck className="size-3.5" />
+                    <span>Secure checkout</span>
+                  </div>
                   <p className="text-center text-xs text-muted-foreground">
                     By placing your order you agree to our terms and conditions.
                   </p>
                 </CardContent>
               </Card>
-              <Button variant="ghost" className="mt-4 w-full" asChild>
+              <Button variant="outline" className="mt-4 w-full" asChild>
                 <Link to="/cart">Back to cart</Link>
               </Button>
             </div>

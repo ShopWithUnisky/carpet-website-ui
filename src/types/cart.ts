@@ -18,9 +18,19 @@ export interface UpdateCartRequest {
   quantity: number;
 }
 
-/** API cart line (snapshots at add time) */
+/** Populated product in cart line (when API returns full product) */
+export interface CartLineProduct {
+  _id: string;
+  id?: string;
+  name?: string;
+  images?: string[];
+  finalPrice?: number;
+  price?: number;
+}
+
+/** API cart line: product can be id (string) or populated object */
 export interface CartLineItem {
-  product: string;
+  product: string | CartLineProduct;
   quantity: number;
   priceAtAdd?: number;
   nameSnapshot?: string;
@@ -35,6 +45,7 @@ export interface CartData {
   totalPrice: number;
   createdAt: string;
   updatedAt: string;
+  __v?: number;
 }
 
 export interface GetCartResponse {

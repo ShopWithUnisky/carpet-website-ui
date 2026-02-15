@@ -90,7 +90,7 @@ export const apiCallWithAuth = async <T, P, B>(
     params,
     withCredentials: true,
     headers: {
-      token: token,
+      Authorization: token,
       "Content-Type": "application/json",
     },
     responseType: options.responseType,

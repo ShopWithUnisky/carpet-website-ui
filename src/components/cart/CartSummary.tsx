@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { formatRupees } from "@/lib/utils";
 
 type CartSummaryProps = {
   subtotal: number;
@@ -14,7 +15,7 @@ export function CartSummary({ subtotal }: CartSummaryProps) {
       </p>
       <p className="mt-4 flex justify-between text-lg font-medium">
         <span>Subtotal</span>
-        <span>${subtotal.toFixed(2)}</span>
+        <span>{formatRupees(subtotal)}</span>
       </p>
       <Button className="mt-6 w-full" size="lg" asChild>
         <Link to="/checkout">Proceed to checkout</Link>

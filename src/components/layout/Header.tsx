@@ -5,20 +5,24 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuthStore } from "@/store/auth-store";
 import { haptic } from "@/lib/haptic";
 import { cn } from "@/lib/utils";
 import { HiHome, HiShoppingCart, HiViewGrid, HiHeart, HiSun, HiMoon } from "react-icons/hi";
 import { Link, useLocation } from "react-router-dom";
 import type { AppUser } from "@/context/AuthContext";
+import type { UserProfile } from "@/types/auth";
 
-function getInitials(user: AppUser): string {
+function getInitials(user: AppUser, userProfile?: UserProfile | null): string {
   if (user.displayName?.trim()) {
     const parts = user.displayName.trim().split(/\s+/);
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return parts[0].slice(0, 2).toUpperCase();
   }
-  if (user.email) return user.email[0].toUpperCase();
-  return "?";
+  if (user.email?.trim()) return user.email.trim()[0].toUpperCase();
+  if (userProfile?.name?.trim()) return userProfile.name.trim()[0].toUpperCase();
+  if (userProfile?.email?.trim()) return userProfile.email.trim()[0].toUpperCase();
+  return "Account".slice(0, 1); // "A" when nothing else available
 }
 
 const bottomNavItems = [
@@ -29,6 +33,7 @@ const bottomNavItems = [
 
 export function Header() {
   const { user, loading, signOut } = useAuth();
+  const userProfile = useAuthStore((s) => s.userProfile);
   const { totalItems } = useCart();
   const { items: wishlistItems } = useWishlist();
   const { theme, toggleTheme } = useTheme();
@@ -135,7 +140,7 @@ export function Header() {
                       />
                     ) : (
                       <span className="text-sm font-medium text-muted-foreground">
-                        {getInitials(user)}
+                        {getInitials(user, userProfile)}
                       </span>
                     )}
                   </button>
@@ -144,9 +149,9 @@ export function Header() {
                       className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border bg-popover py-1 text-popover-foreground shadow-md"
                       role="menu"
                     >
-                      {user.email && (
+                      {(user.email?.trim() || userProfile?.email) && (
                         <div className="truncate px-3 py-2 text-sm text-muted-foreground">
-                          {user.email}
+                          {user.email?.trim() || userProfile?.email}
                         </div>
                       )}
                       <Link

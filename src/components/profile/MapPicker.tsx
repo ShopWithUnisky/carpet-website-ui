@@ -1,19 +1,26 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fix default marker icon in bundler (webpack/vite) - Leaflet expects images at default path
-const defaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+// Use a simple div icon so we don't depend on external image URLs (avoids 404/hydration issues)
+const markerIcon = L.divIcon({
+  className: "leaflet-marker-pin",
+  html: `<span style="
+    display: block;
+    width: 24px;
+    height: 24px;
+    margin-left: -12px;
+    margin-top: -24px;
+    background: #0ea5e9;
+    border: 2px solid white;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  "></span>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 24],
 });
-L.Marker.prototype.options.icon = defaultIcon;
 
 const DEFAULT_CENTER: [number, number] = [20.5937, 78.9629]; // India
 
@@ -65,12 +72,26 @@ export function MapPicker({
   height = "280px",
   flyToZoom = null,
 }: MapPickerProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const position: [number, number] =
     latitude != null && longitude != null
       ? [latitude, longitude]
       : DEFAULT_CENTER;
   const hasMarker = latitude != null && longitude != null;
   const zoom = hasMarker ? (flyToZoom ?? 15) : 5;
+
+  if (!mounted) {
+    return (
+      <div
+        className="flex items-center justify-center overflow-hidden rounded-lg border bg-muted/30 text-sm text-muted-foreground"
+        style={{ height }}
+      >
+        Loading map…
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-hidden rounded-lg border bg-muted/30" style={{ height }}>
@@ -90,7 +111,7 @@ export function MapPicker({
           flyToZoom={flyToZoom}
         />
         {hasMarker && (
-          <Marker position={position}>
+          <Marker position={position} icon={markerIcon}>
             <Popup>Selected location</Popup>
           </Marker>
         )}

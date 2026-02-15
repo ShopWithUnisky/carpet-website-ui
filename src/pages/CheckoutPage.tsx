@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/context/ToastContext";
 import { haptic } from "@/lib/haptic";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { formatRupees } from "@/lib/utils";
 import { getProfileAddresses } from "@/lib/profileAddress";
 import { addOrder } from "@/lib/orders";
 import type { SavedAddress } from "@/lib/profileAddress";
@@ -314,8 +315,7 @@ export function CheckoutPage() {
                         <div className="min-w-0 flex-1">
                           <p className="font-medium truncate">{item.name}</p>
                           <p className="text-muted-foreground">
-                            Qty {item.quantity} · $
-                            {(item.price * item.quantity).toFixed(2)}
+                            Qty {item.quantity} · {formatRupees(item.price * item.quantity)}
                           </p>
                         </div>
                       </li>
@@ -325,7 +325,7 @@ export function CheckoutPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>${subtotal.toFixed(2)}</span>
+                      <span>{formatRupees(subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Shipping</span>
@@ -339,7 +339,7 @@ export function CheckoutPage() {
                   <Separator />
                   <div className="flex justify-between text-base font-semibold">
                     <span>Total</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>{formatRupees(subtotal)}</span>
                   </div>
                   <Button type="submit" className="w-full" size="lg">
                     Place order

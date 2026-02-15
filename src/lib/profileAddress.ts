@@ -1,5 +1,26 @@
+import type { UserProfileAddress } from "@/types/auth";
+
 const STORAGE_KEY_PREFIX = "profile_addresses_";
 const LEGACY_KEY_PREFIX = "profile_address_";
+
+/** API expects: { addressLine, city, state, country, pincode }. Convert from saved/form shape. */
+export function toApiAddress(addr: {
+  address: string;
+  address2?: string;
+  city: string;
+  state: string;
+  country: string;
+  zip: string;
+}): UserProfileAddress {
+  const addressLine = [addr.address, addr.address2].filter(Boolean).join(" ").trim() || undefined;
+  return {
+    addressLine: addressLine || undefined,
+    city: addr.city || undefined,
+    state: addr.state || undefined,
+    country: addr.country || undefined,
+    pincode: addr.zip || undefined,
+  };
+}
 
 export type SavedAddress = {
   id: string;

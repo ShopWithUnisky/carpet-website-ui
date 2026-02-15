@@ -9,13 +9,26 @@ import type {
 } from "@/types/cart";
 
 function mapLineToCartItem(line: CartLineItem): CartItem {
-  const id = line.product;
+  const product = line.product;
+  const id = typeof product === "string" ? product : product._id ?? product.id ?? "";
+  const name =
+    typeof product === "string"
+      ? (line.nameSnapshot ?? "")
+      : (product.name ?? line.nameSnapshot ?? "");
+  const imageUrl =
+    typeof product === "string"
+      ? (line.imageSnapshot ?? "")
+      : (product.images?.[0] ?? line.imageSnapshot ?? "");
+  const price =
+    typeof product === "string"
+      ? (line.priceAtAdd ?? 0)
+      : (product.finalPrice ?? product.price ?? line.priceAtAdd ?? 0);
   return {
     id,
     variantId: id,
-    name: line.nameSnapshot ?? "",
-    imageUrl: line.imageSnapshot ?? "",
-    price: line.priceAtAdd ?? 0,
+    name,
+    imageUrl,
+    price,
     quantity: line.quantity,
   };
 }

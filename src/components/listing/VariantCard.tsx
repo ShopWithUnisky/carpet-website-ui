@@ -7,7 +7,7 @@ import { useToast } from "@/context/ToastContext";
 import type { Variant } from "@/data/variants";
 import { haptic } from "@/lib/haptic";
 import { HiHeart } from "react-icons/hi";
-import { cn } from "@/lib/utils";
+import { cn, formatRupees } from "@/lib/utils";
 
 type VariantCardProps = {
   variant: Variant;
@@ -88,7 +88,7 @@ export function VariantCard({ variant }: VariantCardProps) {
         )}
         <p className="mt-2 font-medium">
           {variant.price != null ? (
-            <>${variant.price}</>
+            <>{formatRupees(variant.price)}</>
           ) : (
             <span className="text-muted-foreground">Enquire</span>
           )}

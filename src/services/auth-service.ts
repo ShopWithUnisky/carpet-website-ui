@@ -28,7 +28,9 @@ interface IAuthService {
   /** Fetch current user profile (requires auth token). */
   readonly getUserProfile: () => Promise<UserProfile | null>;
   /** Update current user profile (requires auth token). */
-  readonly updateUserProfile: (payload: UpdateUserProfileRequest) => Promise<UserProfile | null>;
+  readonly updateUserProfile: (
+    payload: UpdateUserProfileRequest,
+  ) => Promise<UserProfile | null>;
 }
 
 class AuthService implements IAuthService {
@@ -130,7 +132,7 @@ class AuthService implements IAuthService {
         undefined,
         undefined
       >("GET", url);
-      const profile = response.success ? response.user ?? null : null;
+      const profile = response.success ? (response.user ?? null) : null;
       if (profile) {
         useAuthStore.setState({ userProfile: profile, profileLoading: false });
         return profile;
@@ -144,15 +146,15 @@ class AuthService implements IAuthService {
   }
 
   public async updateUserProfile(
-    payload: UpdateUserProfileRequest
+    payload: UpdateUserProfileRequest,
   ): Promise<UserProfile | null> {
     const url = base_url + endpoints.update_user_profile;
     const response = await apiCallWithAuth<
       UpdateUserProfileResponse,
       undefined,
       UpdateUserProfileRequest
-    >("PATCH", url, undefined, payload);
-    const profile = response.success ? response.user ?? null : null;
+    >("PUT", url, undefined, payload);
+    const profile = response.success ? (response.user ?? null) : null;
     if (profile) {
       useAuthStore.setState({ userProfile: profile });
       return profile;

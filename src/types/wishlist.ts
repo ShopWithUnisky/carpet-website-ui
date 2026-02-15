@@ -11,20 +11,23 @@ export interface AddWishlistRequest {
   productId: string;
 }
 
-/** API wishlist line (snapshots at add time, similar to cart) */
-export interface WishlistLineItem {
-  product: string;
-  nameSnapshot?: string;
-  imageSnapshot?: string;
-  priceAtAdd?: number;
+/** Product as returned in wishlist API (full or minimal) */
+export interface WishlistProduct {
+  _id: string;
+  id?: string;
+  name?: string;
+  images?: string[];
+  finalPrice?: number;
+  price?: number;
 }
 
 export interface WishlistData {
   _id?: string;
   user?: string;
-  items: WishlistLineItem[];
+  products: WishlistProduct[];
   createdAt?: string;
   updatedAt?: string;
+  __v?: number;
 }
 
 export interface GetWishlistResponse {

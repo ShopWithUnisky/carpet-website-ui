@@ -1,17 +1,26 @@
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-const defaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
+// Use a simple div icon so we don't depend on external image URLs (avoids 404/hydration issues)
+const markerIcon = L.divIcon({
+  className: "leaflet-marker-pin",
+  html: `<span style="
+    display: block;
+    width: 24px;
+    height: 24px;
+    margin-left: -12px;
+    margin-top: -24px;
+    background: #0ea5e9;
+    border: 2px solid white;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  "></span>`,
+  iconSize: [24, 24],
+  iconAnchor: [12, 24],
 });
-L.Marker.prototype.options.icon = defaultIcon;
 
 type LocationMapProps = {
   latitude: number;
@@ -28,7 +37,21 @@ export function LocationMap({
   className,
   height = "160px",
 }: LocationMapProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const position: [number, number] = [latitude, longitude];
+
+  if (!mounted) {
+    return (
+      <div
+        className={`flex items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/20 text-sm text-muted-foreground ${className ?? ""}`}
+        style={{ height }}
+      >
+        Loading map…
+      </div>
+    );
+  }
 
   return (
     <div
@@ -48,7 +71,7 @@ export function LocationMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Marker position={position}>
+        <Marker position={position} icon={markerIcon}>
           {label && <Popup>{label}</Popup>}
         </Marker>
       </MapContainer>

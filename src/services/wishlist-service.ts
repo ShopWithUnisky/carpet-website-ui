@@ -3,24 +3,24 @@ import { base_url, endpoints } from "@/apiActions/environment";
 import { useWishlistStore } from "@/store/wishlist-store";
 import type {
   WishlistItem,
-  WishlistLineItem,
+  WishlistProduct,
   GetWishlistResponse,
   WishlistMutationResponse,
 } from "@/types/wishlist";
 
-function mapLineToWishlistItem(line: WishlistLineItem): WishlistItem {
-  const id = line.product;
+function mapProductToWishlistItem(product: WishlistProduct): WishlistItem {
+  const id = product._id ?? product.id ?? "";
   return {
     id,
     variantId: id,
-    name: line.nameSnapshot ?? "",
-    imageUrl: line.imageSnapshot ?? "",
-    price: line.priceAtAdd ?? 0,
+    name: product.name ?? "",
+    imageUrl: product.images?.[0] ?? "",
+    price: product.finalPrice ?? product.price ?? 0,
   };
 }
 
-function mapLinesToItems(lines: WishlistLineItem[]): WishlistItem[] {
-  return lines.map(mapLineToWishlistItem);
+function mapProductsToItems(products: WishlistProduct[]): WishlistItem[] {
+  return products.map(mapProductToWishlistItem);
 }
 
 interface IWishlistService {
@@ -51,8 +51,8 @@ class WishlistService implements IWishlistService {
         undefined,
         undefined
       >("GET", url);
-      const raw = response.data?.items ?? [];
-      const wishlist = mapLinesToItems(Array.isArray(raw) ? raw : []);
+      const raw = response.data?.products ?? [];
+      const wishlist = mapProductsToItems(Array.isArray(raw) ? raw : []);
       useWishlistStore.setState({ wishlist, isLoading: false });
     } catch (error) {
       useWishlistStore.setState({ isLoading: false });
@@ -68,9 +68,9 @@ class WishlistService implements IWishlistService {
       undefined,
       { productId: string }
     >("POST", url, undefined, body);
-    const raw = response.data?.items ?? [];
+    const raw = response.data?.products ?? [];
     if (Array.isArray(raw)) {
-      useWishlistStore.setState({ wishlist: mapLinesToItems(raw) });
+      useWishlistStore.setState({ wishlist: mapProductsToItems(raw) });
     } else {
       await this.getWishlist();
     }
@@ -84,9 +84,9 @@ class WishlistService implements IWishlistService {
       undefined,
       { productId: string }
     >("POST", url, undefined, body);
-    const raw = response.data?.items ?? [];
+    const raw = response.data?.products ?? [];
     if (Array.isArray(raw)) {
-      useWishlistStore.setState({ wishlist: mapLinesToItems(raw) });
+      useWishlistStore.setState({ wishlist: mapProductsToItems(raw) });
     } else {
       await this.getWishlist();
     }
@@ -102,9 +102,9 @@ class WishlistService implements IWishlistService {
       undefined,
       undefined
     >("DELETE", url);
-    const raw = response.data?.items ?? [];
+    const raw = response.data?.products ?? [];
     if (Array.isArray(raw)) {
-      useWishlistStore.setState({ wishlist: mapLinesToItems(raw) });
+      useWishlistStore.setState({ wishlist: mapProductsToItems(raw) });
     } else {
       await this.getWishlist();
     }

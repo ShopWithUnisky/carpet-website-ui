@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
-import { useWishlist } from "@/context/WishlistContext";
 import { useToast } from "@/context/ToastContext";
 import { useRecentlyViewed } from "@/context/RecentlyViewedContext";
 import { useProductStore } from "@/store/product-store";
 import { productService } from "@/services/product-service";
 import type { Product } from "@/types/product";
 import { haptic } from "@/lib/haptic";
-import { HiHeart } from "react-icons/hi";
+import { HiChevronDown } from "react-icons/hi";
 import { cn, formatRupees } from "@/lib/utils";
 
 function findProduct(products: Product[], idOrSlug: string): Product | undefined {
@@ -24,6 +23,7 @@ function findProduct(products: Product[], idOrSlug: string): Product | undefined
 
 export function VariantDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const products = useProductStore((state) => state.products);
   const isLoading = useProductStore((state) => state.isLoading);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
@@ -32,11 +32,11 @@ export function VariantDetailPage() {
   const product = id ? (findProduct(products, id) ?? detailProduct) : null;
 
   const { addItem } = useCart();
-  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlist();
   const { toast } = useToast();
   const { addViewed } = useRecentlyViewed();
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [specsOpen, setSpecsOpen] = useState(false);
 
   const productId = product?.id ?? product?._id ?? "";
   const images = product?.images?.length ? product.images : [];
@@ -116,7 +116,6 @@ export function VariantDetailPage() {
   }
 
   const price = product.finalPrice ?? product.price ?? 0;
-  const inWishlist = isInWishlist(productId);
 
   const handleAddToCart = () => {
     haptic();
@@ -131,21 +130,18 @@ export function VariantDetailPage() {
     toast("Added to cart");
   };
 
-  const handleWishlistToggle = () => {
+  const handleBuyNow = () => {
     haptic();
-    if (inWishlist) {
-      removeFromWishlist(productId);
-      toast("Removed from wishlist");
-    } else {
-      addToWishlist({
-        id: productId,
-        variantId: productId,
-        name: product.name,
-        imageUrl: product.images?.[0] ?? "",
-        price,
-      });
-      toast("Added to wishlist");
-    }
+    addItem({
+      id: productId,
+      variantId: productId,
+      name: product.name,
+      imageUrl: product.images?.[0] ?? "",
+      price,
+      quantity: 1,
+    });
+    toast("Added to cart");
+    navigate("/checkout");
   };
 
   const specs = [
@@ -215,7 +211,7 @@ export function VariantDetailPage() {
           <div className="mt-6 flex flex-wrap items-baseline gap-3 border-b border-border pb-6">
             {price > 0 ? (
               <>
-                <span className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 sm:text-3xl">
                   {formatRupees(price)}
                 </span>
                 {product.mrp > 0 && product.discountPercentage > 0 && (
@@ -224,7 +220,7 @@ export function VariantDetailPage() {
                   </span>
                 )}
                 {product.discountPercentage > 0 && (
-                  <span className="rounded-md bg-primary/10 px-2 py-0.5 text-sm font-medium text-primary">
+                  <span className="rounded-md bg-emerald-500/15 px-2.5 py-1 text-sm font-semibold text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-400">
                     {product.discountPercentage}% off
                   </span>
                 )}
@@ -232,6 +228,25 @@ export function VariantDetailPage() {
             ) : (
               <span className="text-xl text-muted-foreground">Enquire for price</span>
             )}
+          </div>
+
+          <div className="flex flex-wrap gap-3 py-4">
+            <Button
+              onClick={handleBuyNow}
+              size="lg"
+              className="min-w-[140px] bg-primary font-semibold shadow-md hover:bg-primary/90"
+              disabled={price <= 0 || !product.inStock}
+            >
+              Buy now
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handleAddToCart}
+              disabled={price <= 0 || !product.inStock}
+            >
+              Add to cart
+            </Button>
           </div>
 
           {product.description && (
@@ -246,26 +261,66 @@ export function VariantDetailPage() {
           )}
 
           {specs.length > 0 && (
-            <div className="mt-8">
-              <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                Specifications
-              </p>
-              <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-                {specs.map(({ label, value }) => (
-                  <div
-                    key={label}
-                    className="flex flex-col border-b border-border/60 pb-2 last:border-0 sm:last:border-b sm:last:pb-2"
-                  >
-                    <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      {label}
-                    </dt>
-                    <dd className="mt-0.5 text-sm font-medium capitalize text-foreground">
-                      {value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
+            <>
+              {/* Mobile: accordion */}
+              <div className="mt-8 block border-b border-border md:hidden">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSpecsOpen((o) => !o);
+                    haptic();
+                  }}
+                  className="flex w-full items-center justify-between py-3 text-left"
+                  aria-expanded={specsOpen}
+                >
+                  <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                    Specifications
+                  </span>
+                  <HiChevronDown
+                    className={cn("size-5 shrink-0 text-muted-foreground transition-transform", specsOpen && "rotate-180")}
+                    aria-hidden
+                  />
+                </button>
+                {specsOpen && (
+                  <dl className="grid grid-cols-1 gap-x-6 gap-y-3 pb-4">
+                    {specs.map(({ label, value }) => (
+                      <div
+                        key={label}
+                        className="flex flex-col border-b border-border/60 pb-2 last:border-0"
+                      >
+                        <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          {label}
+                        </dt>
+                        <dd className="mt-0.5 text-sm font-medium capitalize text-foreground">
+                          {value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+              </div>
+              {/* Desktop: always visible */}
+              <div className="mt-8 hidden md:block">
+                <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                  Specifications
+                </p>
+                <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+                  {specs.map(({ label, value }) => (
+                    <div
+                      key={label}
+                      className="flex flex-col border-b border-border/60 pb-2 last:border-0 sm:last:border-b sm:last:pb-2"
+                    >
+                      <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        {label}
+                      </dt>
+                      <dd className="mt-0.5 text-sm font-medium capitalize text-foreground">
+                        {value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </>
           )}
 
           {product.roomType?.length > 0 && (
@@ -303,22 +358,24 @@ export function VariantDetailPage() {
             </p>
           )}
 
-          <div className="mt-8 flex flex-wrap gap-3 border-t border-border pt-6">
+          {/* Sticky action bar on mobile: same buttons so they're always visible when scrolling */}
+          <div className="sticky bottom-0 left-0 right-0 z-10 mt-8 flex flex-wrap gap-3 border-t border-border bg-background/95 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden">
             <Button
-              onClick={handleAddToCart}
+              onClick={handleBuyNow}
               size="lg"
+              className="flex-1 font-semibold shadow-md"
               disabled={price <= 0 || !product.inStock}
             >
-              Add to cart
+              Buy now
             </Button>
             <Button
               variant="outline"
               size="lg"
-              onClick={handleWishlistToggle}
-              className={cn(inWishlist && "text-red-500")}
+              className="flex-1"
+              onClick={handleAddToCart}
+              disabled={price <= 0 || !product.inStock}
             >
-              <HiHeart className={cn("mr-2 size-5", inWishlist && "fill-current")} />
-              {inWishlist ? "In wishlist" : "Add to wishlist"}
+              Add to cart
             </Button>
           </div>
         </div>

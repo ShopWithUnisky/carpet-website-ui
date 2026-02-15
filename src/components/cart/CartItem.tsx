@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useCart, type CartItem as CartItemType } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useToast } from "@/context/ToastContext";
+import { formatRupees } from "@/lib/utils";
 import { haptic } from "@/lib/haptic";
 
 type CartItemProps = {
@@ -40,7 +41,7 @@ export function CartItem({ item }: CartItemProps) {
         <div>
           <p className="font-medium">{item.name}</p>
           <p className="text-sm text-muted-foreground">
-            ${item.price.toFixed(2)} each
+            {formatRupees(item.price)} each
           </p>
         </div>
       </div>
@@ -66,7 +67,7 @@ export function CartItem({ item }: CartItemProps) {
           </Button>
         </div>
         <p className="w-20 text-right font-medium">
-          ${lineTotal.toFixed(2)}
+          {formatRupees(lineTotal)}
         </p>
         <Button
           variant="ghost"

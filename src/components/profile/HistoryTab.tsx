@@ -17,6 +17,7 @@ import {
   EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty";
+import { formatRupees } from "@/lib/utils";
 import { getOrders, type SavedOrder } from "@/lib/orders";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
@@ -135,8 +136,7 @@ export function HistoryTab() {
                     </span>
                     <span className="text-sm text-muted-foreground">
                       {order.items.length} item
-                      {order.items.length !== 1 ? "s" : ""} · $
-                      {order.subtotal.toFixed(2)}
+                      {order.items.length !== 1 ? "s" : ""} · {formatRupees(order.subtotal)}
                     </span>
                   </div>
                   {openId === order.id ? (
@@ -163,15 +163,14 @@ export function HistoryTab() {
                           <div className="min-w-0 flex-1">
                             <p className="font-medium truncate">{item.name}</p>
                             <p className="text-muted-foreground">
-                              Qty {item.quantity} · $
-                              {(item.price * item.quantity).toFixed(2)}
+                              Qty {item.quantity} · {formatRupees(item.price * item.quantity)}
                             </p>
                           </div>
                         </li>
                       ))}
                     </ul>
                     <p className="text-sm font-medium text-right">
-                      Total ${order.subtotal.toFixed(2)}
+                      Total {formatRupees(order.subtotal)}
                     </p>
                   </CardContent>
                 )}

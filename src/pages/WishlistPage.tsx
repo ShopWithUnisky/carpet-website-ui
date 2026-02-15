@@ -11,6 +11,7 @@ import {
   EmptyContent,
   EmptyMedia,
 } from "@/components/ui/empty";
+import { formatRupees } from "@/lib/utils";
 import { haptic } from "@/lib/haptic";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
@@ -91,7 +92,7 @@ export function WishlistPage() {
             <div className="min-w-0 flex-1">
               <p className="font-medium truncate">{item.name}</p>
               <p className="text-sm text-muted-foreground">
-                ${item.price.toFixed(2)}
+                {formatRupees(item.price)}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <Button size="sm" onClick={() => handleAddToCart(item)}>

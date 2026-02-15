@@ -32,6 +32,7 @@ import {
   addProfileAddress,
   updateProfileAddress,
   removeProfileAddress,
+  toApiAddress,
   ADDRESS_NAMES,
   type SavedAddress,
 } from "@/lib/profileAddress";
@@ -41,7 +42,7 @@ import {
   reverseGeocode,
 } from "@/lib/geolocation";
 import { MapPicker, STREET_ZOOM } from "@/components/profile/MapPicker";
-import { MapPin, Pencil, Plus, Trash2, Locate, LogOut, UserMinus } from "lucide-react";
+import { MapPin, Pencil, Plus, Trash2, Locate, UserMinus } from "lucide-react";
 
 function isFirebaseUser(u: AppUser): u is User {
   return !u.uid.startsWith("backend-");
@@ -52,7 +53,7 @@ type ProfileDetailsTabProps = {
 };
 
 export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
-  const { signOut, deleteAccount } = useAuth();
+  const { deleteAccount } = useAuth();
   const userProfile = useAuthStore((s) => s.userProfile);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -82,6 +83,7 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
   const [displayNameValue, setDisplayNameValue] = useState(displayNameFromUser);
   const [savingName, setSavingName] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   const refreshAddresses = () => setAddresses(getProfileAddresses(user.uid));
 
@@ -114,13 +116,6 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
     } finally {
       setSavingName(false);
     }
-  };
-
-  const handleSignOut = async () => {
-    haptic();
-    await signOut();
-    toast("Signed out");
-    navigate("/");
   };
 
   const handleDeleteAccount = async () => {
@@ -209,6 +204,28 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
     }
   };
 
+  const handleSetAsDefault = async (addr: SavedAddress) => {
+    if (isFirebaseUser(user)) return;
+    setSettingDefaultId(addr.id);
+    try {
+      const apiAddress = toApiAddress({
+        address: addr.address,
+        address2: addr.address2,
+        city: addr.city,
+        state: addr.state,
+        country: addr.country,
+        zip: addr.zip,
+      });
+      const updated = await authService.updateUserProfile({ address: apiAddress });
+      if (updated) toast("Default address updated");
+      else toast("Failed to update default address");
+    } catch {
+      toast("Failed to update default address");
+    } finally {
+      setSettingDefaultId(null);
+    }
+  };
+
   const applyReverseGeocode = async (lat: number, lng: number) => {
     setGeocodeLoading(true);
     const parsed = await reverseGeocode(lat, lng);
@@ -276,83 +293,93 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
               </div>
             )}
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="profile-name">Display name</Label>
-            {editingDisplayName ? (
-              <div className="flex gap-2">
-                <Input
-                  id="profile-name"
-                  value={displayNameValue}
-                  onChange={(e) => setDisplayNameValue(e.target.value)}
-                  placeholder="Your name"
-                  className="flex-1"
-                />
-                <Button size="sm" onClick={handleSaveDisplayName} disabled={savingName}>
-                  {savingName ? "Saving…" : "Save"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setDisplayNameValue(displayNameFromUser);
-                    setEditingDisplayName(false);
-                  }}
-                  disabled={savingName}
-                >
-                  Cancel
-                </Button>
+          {/* Name */}
+          <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <Label htmlFor="profile-name" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Name
+                </Label>
+                {editingDisplayName ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Input
+                      id="profile-name"
+                      value={displayNameValue}
+                      onChange={(e) => setDisplayNameValue(e.target.value)}
+                      placeholder="Your name"
+                      className="max-w-sm"
+                    />
+                    <Button size="sm" onClick={handleSaveDisplayName} disabled={savingName}>
+                      {savingName ? "Saving…" : "Save"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setDisplayNameValue(displayNameFromUser);
+                        setEditingDisplayName(false);
+                      }}
+                      disabled={savingName}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <p id="profile-name" className="mt-1.5 text-base font-medium text-foreground">
+                    {displayNameFromUser || "—"}
+                  </p>
+                )}
               </div>
-            ) : (
-              <div className="flex gap-2">
-                <Input
-                  id="profile-name"
-                  value={displayNameFromUser}
-                  readOnly
-                  className="bg-muted/50 flex-1"
-                />
+              {!editingDisplayName && (
                 <Button
-                  size="sm"
-                  variant="outline"
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 text-muted-foreground hover:text-foreground"
                   onClick={() => {
                     setDisplayNameValue(displayNameFromUser);
                     setEditingDisplayName(true);
                   }}
+                  aria-label="Edit name"
                 >
                   <Pencil className="size-4" />
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="profile-email">Email</Label>
-            <Input
-              id="profile-email"
-              type="email"
-              value={user.email ?? ""}
-              readOnly
-              className="bg-muted/50"
-            />
-          </div>
+
+          {/* Email – only when present from API / auth */}
           {(() => {
-            const phone = isFirebaseUser(user) ? user.phoneNumber : userProfile?.phoneNumber;
-            return phone ? (
-              <div className="grid gap-2">
-                <Label htmlFor="profile-phone">Phone</Label>
-                <Input
-                  id="profile-phone"
-                  value={phone}
-                  readOnly
-                  className="bg-muted/50"
-                />
+            const email = user.email ?? userProfile?.email;
+            return email ? (
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <Label htmlFor="profile-email" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Email
+                </Label>
+                <p id="profile-email" className="mt-1.5 text-base text-foreground">
+                  {email}
+                </p>
               </div>
             ) : null;
           })()}
-          <div className="flex flex-col gap-2 pt-4 border-t">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={handleSignOut}>
-              <LogOut className="mr-2 size-4" />
-              Sign out
-            </Button>
-            {isFirebaseUser(user) && (
+
+          {/* Phone – only when present */}
+          {(() => {
+            const phone = isFirebaseUser(user) ? user.phoneNumber : userProfile?.phoneNumber;
+            return phone ? (
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <Label htmlFor="profile-phone" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Phone
+                </Label>
+                <p id="profile-phone" className="mt-1.5 text-base text-foreground">
+                  {phone}
+                </p>
+              </div>
+            ) : null;
+          })()}
+
+          {isFirebaseUser(user) && (
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
               <Button
                 variant="outline"
                 className="w-full sm:w-auto text-destructive hover:text-destructive hover:bg-destructive/10"
@@ -362,17 +389,44 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
                 <UserMinus className="mr-2 size-4" />
                 {deleting ? "Deleting…" : "Delete account"}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Addresses section */}
+      {/* Profile address (from API) – backend users */}
+      {!isFirebaseUser(user) && userProfile?.address && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Default address</CardTitle>
+            <CardDescription>
+              Address associated with your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-4">
+              {userProfile.address.addressLine && (
+                <p className="text-sm text-foreground">{userProfile.address.addressLine}</p>
+              )}
+              {(userProfile.address.city || userProfile.address.state || userProfile.address.pincode) && (
+                <p className="text-sm text-muted-foreground">
+                  {[userProfile.address.city, userProfile.address.state, userProfile.address.pincode].filter(Boolean).join(", ")}
+                </p>
+              )}
+              {userProfile.address.country && (
+                <p className="text-sm font-medium text-foreground">{userProfile.address.country}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Saved addresses (home, work, etc.) */}
       <Card>
         <CardHeader>
           <CardTitle>Addresses</CardTitle>
           <CardDescription>
-            Add home, work, or other addresses. Use your current location or set a pin on the map.
+            Add home, work, or other addresses for checkout. Use your current location or set a pin on the map.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -450,12 +504,12 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="edit-zip">ZIP / Postal code</Label>
+                    <Label htmlFor="edit-zip">Pincode</Label>
                     <Input
                       id="edit-zip"
                       value={editZip}
                       onChange={(e) => setEditZip(e.target.value)}
-                      placeholder="ZIP"
+                      placeholder="e.g. 400001"
                     />
                   </div>
                 </div>
@@ -554,6 +608,18 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
                               {addr.name}
                             </Badge>
                             <div className="flex gap-1">
+                              {!isFirebaseUser(user) && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-xs"
+                                  onClick={() => handleSetAsDefault(addr)}
+                                  disabled={settingDefaultId === addr.id}
+                                >
+                                  {settingDefaultId === addr.id ? "Saving…" : "Set as default"}
+                                </Button>
+                              )}
                               <Button
                                 type="button"
                                 variant="ghost"

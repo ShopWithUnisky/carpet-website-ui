@@ -1,8 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/context/AuthContext";
-import { useAuthStore } from "@/store/auth-store";
+import { razorpayKeyId } from "@/apiActions/environment";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,10 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -21,14 +16,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
-import { haptic } from "@/lib/haptic";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
-import { formatRupees } from "@/lib/utils";
-import { getProfileAddresses } from "@/lib/profileAddress";
+import { haptic } from "@/lib/haptic";
 import { addOrder } from "@/lib/orders";
 import type { SavedAddress } from "@/lib/profileAddress";
-import { Mail, Phone, MapPin, ShoppingBag, ShieldCheck } from "lucide-react";
+import { getProfileAddresses } from "@/lib/profileAddress";
+import { loadRazorpayScript, openRazorpayCheckout } from "@/lib/razorpay";
+import { formatRupees } from "@/lib/utils";
+import { createPaymentOrder, verifyPayment } from "@/services/payment-service";
+import { useAuthStore } from "@/store/auth-store";
+import { Mail, MapPin, Phone, ShieldCheck, ShoppingBag } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const DEFAULT_COUNTRY = "India";
 
@@ -55,6 +58,7 @@ export function CheckoutPage() {
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const hasAppliedProfileRef = useRef(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // Sync email and name from user / userProfile
   useEffect(() => {
@@ -139,24 +143,97 @@ export function CheckoutPage() {
     );
   }
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     haptic();
-    if (user?.uid) {
-      addOrder(user.uid, {
-        items: items.map((i) => ({
-          variantId: i.variantId,
-          name: i.name,
-          imageUrl: i.imageUrl,
-          price: i.price,
-          quantity: i.quantity,
-        })),
-        subtotal,
-      });
+
+    const orderPayload = {
+      items: items.map((i) => ({
+        variantId: i.variantId,
+        name: i.name,
+        imageUrl: i.imageUrl,
+        price: i.price,
+        quantity: i.quantity,
+      })),
+      subtotal,
+    };
+
+    if (!razorpayKeyId) {
+      if (user?.uid) addOrder(user.uid, orderPayload);
+      clearCart();
+      toast("Order placed successfully");
+      navigate("/checkout/complete", { state: { orderPlaced: true } });
+      return;
     }
-    clearCart();
-    toast("Order placed successfully");
-    navigate("/checkout/complete", { state: { orderPlaced: true } });
+
+    setPaymentLoading(true);
+    try {
+      const amountPaise = Math.round(subtotal * 100);
+      const { data: orderData, keyId: backendKeyId } = await createPaymentOrder({
+        amount: amountPaise,
+        currency: "INR",
+        receipt: `order_${Date.now()}`,
+        customer: {
+          name: shipping.fullName,
+          email: contact.email,
+          phone: contact.phone || undefined,
+        },
+        shipping: {
+          fullName: shipping.fullName,
+          address: shipping.address,
+          address2: shipping.address2 || undefined,
+          city: shipping.city,
+          state: shipping.state,
+          zip: shipping.zip,
+          country: shipping.country,
+        },
+        items: orderPayload.items,
+      });
+
+      const { order_id, amount, currency } = orderData;
+      const keyToUse = backendKeyId || razorpayKeyId;
+
+      if (!keyToUse) {
+        throw new Error("Razorpay Key ID is missing");
+      }
+
+      await loadRazorpayScript();
+      openRazorpayCheckout(keyToUse, {
+        order_id: order_id,
+        amount,
+        currency: currency || "INR",
+        name: "Carpet Company",
+        description: `${totalItems} item(s) · ${formatRupees(subtotal)}`,
+        prefill: {
+          name: shipping.fullName,
+          email: contact.email,
+          contact: contact.phone || undefined,
+        },
+        handler: async (response) => {
+          try {
+            await verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            if (user?.uid) addOrder(user.uid, orderPayload);
+            clearCart();
+            toast("Payment successful. Order placed.");
+            navigate("/checkout/complete", { state: { orderPlaced: true } });
+          } catch (err) {
+            toast(err instanceof Error ? err.message : "Payment verification failed");
+          } finally {
+            setPaymentLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: () => setPaymentLoading(false),
+        },
+      });
+    } catch (err) {
+      setPaymentLoading(false);
+      toast(err instanceof Error ? err.message : "Could not start payment");
+    }
   };
 
   return (
@@ -429,8 +506,17 @@ export function CheckoutPage() {
                     <span>Total</span>
                     <span>{formatRupees(subtotal)}</span>
                   </div>
-                  <Button type="submit" className="h-11 w-full" size="lg">
-                    Place order
+                  <Button
+                    type="submit"
+                    className="h-11 w-full"
+                    size="lg"
+                    disabled={paymentLoading}
+                  >
+                    {paymentLoading
+                      ? "Opening payment…"
+                      : razorpayKeyId
+                        ? "Pay with Razorpay"
+                        : "Place order"}
                   </Button>
                   <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                     <ShieldCheck className="size-3.5" />

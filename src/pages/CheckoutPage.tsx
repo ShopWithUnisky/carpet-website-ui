@@ -168,9 +168,8 @@ export function CheckoutPage() {
 
     setPaymentLoading(true);
     try {
-      const amountPaise = Math.round(subtotal * 100);
       const { data: orderData, keyId: backendKeyId } = await createPaymentOrder({
-        amount: amountPaise,
+        userId: user?.id || "guest",
         currency: "INR",
         receipt: `order_${Date.now()}`,
         customer: {

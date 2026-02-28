@@ -1,4 +1,4 @@
-export const base_url = "http://192.168.29.65:5000/api/v1";
+export const base_url = "http://localhost:5000/api/v1";
 // export const base_url = "https://tcc-backend-tkku.onrender.com/api/v1";
 
 /** Razorpay Key ID (public). Set VITE_RAZORPAY_KEY_ID in .env for payment checkout. */

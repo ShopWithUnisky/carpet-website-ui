@@ -1,6 +1,6 @@
-/** Request to create a Razorpay order on the backend. Amount in paise. */
+/** Request to create a Razorpay order on the backend. Amount is computed server-side from items. */
 export interface CreatePaymentOrderRequest {
-  amount: number;
+  userId?: string;
   currency: string;
   receipt: string;
   notes?: Record<string, unknown>;

@@ -86,6 +86,7 @@ export function ProfileDetailsTab({ user }: ProfileDetailsTabProps) {
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
 
   const refreshAddresses = () => setAddresses(getProfileAddresses(user.uid));
+  console.log(user)
 
   useEffect(() => {
     refreshAddresses();
